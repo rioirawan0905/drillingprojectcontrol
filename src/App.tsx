@@ -14,19 +14,37 @@ import WBSCostChart from './components/WBSCostChart';
 import AICopilotTerminal from './components/AICopilotTerminal';
 import AlertSystem from './components/AlertSystem';
 import FormulaGlossary from './components/FormulaGlossary';
-import { Compass, CalendarDays, FileSpreadsheet, Download, FileText, RotateCcw } from 'lucide-react';
+import { Compass, CalendarDays, FileSpreadsheet, Download, FileText } from 'lucide-react';
+
+const normalizeProjectData = (project: ProjectYearData): ProjectYearData => {
+  const C = project.reportingMonth;
+  return {
+    ...project,
+    monthlyData: project.monthlyData.map((m) => {
+      if (m.month > C) {
+        return {
+          ...m,
+          actualCumulativeProgress: null,
+          actualCashFlow: null,
+        };
+      }
+      return m;
+    }),
+  };
+};
 
 export default function App() {
   const [projects, setProjects] = useState<ProjectYearData[]>(() => {
     const saved = localStorage.getItem('mln_drilling_projects_sim');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved) as ProjectYearData[];
+        return parsed.map(normalizeProjectData);
       } catch (e) {
         console.error("Failed to parse saved projects data", e);
       }
     }
-    return INITIAL_PROJECTS;
+    return INITIAL_PROJECTS.map(normalizeProjectData);
   });
 
   const [selectedYear, setSelectedYear] = useState<number>(() => {
@@ -63,13 +81,8 @@ export default function App() {
   const currentProject = projects.find((p) => p.year === selectedYear) || projects[0];
 
   const handleUpdateProject = (updated: ProjectYearData) => {
-    setProjects((prev) => prev.map((proj) => (proj.year === updated.year ? updated : proj)));
-  };
-
-  const handleResetData = () => {
-    if (window.confirm("Are you sure you want to restore default campaign baselines? Your simulated changes will be reset.")) {
-      setProjects(JSON.parse(JSON.stringify(INITIAL_PROJECTS)));
-    }
+    const normalized = normalizeProjectData(updated);
+    setProjects((prev) => prev.map((proj) => (proj.year === normalized.year ? normalized : proj)));
   };
 
   const handleExportCSV = () => {
@@ -167,14 +180,6 @@ export default function App() {
             >
               <FileText className="w-3.5 h-3.5 text-emerald-600" />
               Export PDF / Print
-            </button>
-
-            <button
-              onClick={handleResetData}
-              className="text-xs font-bold text-slate-500 hover:text-rose-600 border border-slate-200 hover:border-rose-250 bg-white hover:bg-rose-50/40 px-3 py-1.5 rounded-lg transition-all cursor-pointer shadow-3xs flex items-center gap-1.5"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              Reset
             </button>
           </div>
         </div>

@@ -56,11 +56,11 @@ export default function SidebarControls({
     // Auto sync actual cumulative progress / actual cash flows when active month moves down or up
     const updatedMonthly = currentProject.monthlyData.map((m) => {
       if (m.month > val) {
-        // Clear future actuals if they are null
+        // Clear future actuals to null
         return {
           ...m,
-          actualCumulativeProgress: m.actualCumulativeProgress !== null ? m.actualCumulativeProgress : null,
-          actualCashFlow: m.actualCashFlow !== null ? m.actualCashFlow : null,
+          actualCumulativeProgress: null,
+          actualCashFlow: null,
         };
       } else {
         // If it was null but is now historical, set it to plan progress or 0 as baseline

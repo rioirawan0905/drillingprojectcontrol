@@ -223,7 +223,7 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
           <thead>
             {/* Months Header block */}
             <tr className="bg-slate-900 text-white font-mono text-[10px] uppercase font-bold tracking-wider">
-              <th className="p-3 border-r border-slate-800 min-w-[200px] sticky left-0 z-10 bg-slate-900">
+              <th className="p-3 border-r border-slate-800 w-[230px] min-w-[230px] max-w-[230px] sticky left-0 z-10 bg-slate-900">
                 Variables & Indices
               </th>
               {MONTH_NAMES.map((name, i) => {
@@ -248,9 +248,11 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
             
             {/* ROW 1: Monthly Target / Incremental Plan Progress (%) */}
             <tr className="hover:bg-slate-50/50 transition-colors">
-              <td className="p-2.5 font-bold text-slate-700 border-r border-slate-200 sticky left-0 bg-white z-10 flex items-center justify-between">
-                <span>Incremental Target Prog (%)</span>
-                <span className="text-[9px] text-blue-500 bg-blue-50/50 px-1.5 py-0.5 rounded-sm uppercase tracking-tight font-mono">Plan</span>
+              <td className="p-2.5 font-bold text-slate-700 border-r border-slate-200 sticky left-0 bg-white z-10 w-[230px] min-w-[230px] max-w-[230px]">
+                <div className="flex items-center justify-between gap-1.5 w-full">
+                  <span className="truncate">Incremental Target Prog (%)</span>
+                  <span className="text-[9px] text-blue-500 bg-blue-50/50 px-1.5 py-0.5 rounded-sm uppercase tracking-tight font-mono shrink-0">Plan</span>
+                </div>
               </td>
               {project.monthlyData.map((m, idx) => {
                 const incVal = getIncrementalPlan(idx);
@@ -273,9 +275,11 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
 
             {/* ROW 2: Cumulative Target Progress (%) */}
             <tr className="bg-slate-50/20 hover:bg-slate-50/50 transition-colors">
-              <td className="p-2.5 font-bold text-slate-700 border-r border-slate-200 sticky left-0 bg-slate-50 z-10 flex items-center justify-between">
-                <span>Cumulative Target Prog (%)</span>
-                <span className="text-[9px] text-blue-600 bg-blue-100/70 px-1.5 py-0.5 rounded-sm uppercase tracking-tight font-mono">Cumulative</span>
+              <td className="p-2.5 font-bold text-slate-700 border-r border-slate-200 sticky left-0 bg-slate-50 z-10 w-[230px] min-w-[230px] max-w-[230px]">
+                <div className="flex items-center justify-between gap-1.5 w-full">
+                  <span className="truncate">Cumulative Target Prog (%)</span>
+                  <span className="text-[9px] text-blue-600 bg-blue-100/70 px-1.5 py-0.5 rounded-sm uppercase tracking-tight font-mono shrink-0">Cumulative</span>
+                </div>
               </td>
               {project.monthlyData.map((m, idx) => (
                 <td key={`cum-plan-${idx}`} className="p-2 border-r border-slate-200 bg-blue-50/20">
@@ -295,9 +299,11 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
 
             {/* ROW 3: Monthly Actual / Incremental Progress (%) */}
             <tr className="hover:bg-slate-50/50 transition-colors">
-              <td className="p-2.5 font-bold text-slate-700 border-r border-slate-200 sticky left-0 bg-white z-10 flex items-center justify-between">
-                <span>Incremental Actual Prog (%)</span>
-                <span className="text-[9px] text-orange-500 bg-orange-50/50 px-1.5 py-0.5 rounded-sm uppercase tracking-tight font-mono">Actual</span>
+              <td className="p-2.5 font-bold text-slate-700 border-r border-slate-200 sticky left-0 bg-white z-10 w-[230px] min-w-[230px] max-w-[230px]">
+                <div className="flex items-center justify-between gap-1.5 w-full">
+                  <span className="truncate">Incremental Actual Prog (%)</span>
+                  <span className="text-[9px] text-orange-500 bg-orange-50/50 px-1.5 py-0.5 rounded-sm uppercase tracking-tight font-mono shrink-0">Actual</span>
+                </div>
               </td>
               {project.monthlyData.map((m, idx) => {
                 const incActualVal = getIncrementalActual(idx);
@@ -312,12 +318,17 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
                   >
                     <SafeNumberInput
                       step="0.1"
-                      value={incActualVal}
-                      placeholder="0"
+                      value={isHistorical ? incActualVal : null}
+                      placeholder={isHistorical ? "0" : "—"}
+                      disabled={!isHistorical}
                       onFocus={() => setActiveCellInfo(`Month ${idx + 1} Incremental Actual Progress`)}
                       onBlur={() => setActiveCellInfo(null)}
                       onChange={(val) => handleIncrementalActualChange(idx, val ?? 0)}
-                      className="w-full text-center font-bold font-mono rounded px-1.5 py-1 border transition-colors bg-white text-slate-800 border-slate-200 hover:border-slate-300 focus:outline-hidden focus:ring-1 focus:ring-blue-500 shadow-3xs"
+                      className={`w-full text-center font-bold font-mono rounded px-1.5 py-1 border transition-colors ${
+                        isHistorical 
+                          ? 'bg-white text-slate-800 border-slate-200 hover:border-slate-300 focus:outline-hidden focus:ring-1 focus:ring-blue-500 shadow-3xs'
+                          : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed select-none'
+                      }`}
                     />
                   </td>
                 );
@@ -326,9 +337,11 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
 
             {/* ROW 4: Cumulative Actual Progress (%) */}
             <tr className="bg-slate-50/20 hover:bg-slate-50/50 transition-colors">
-              <td className="p-2.5 font-bold text-slate-700 border-r border-slate-200 sticky left-0 bg-slate-50 z-10 flex items-center justify-between">
-                <span>Cumulative Actual Prog (%)</span>
-                <span className="text-[9px] text-orange-600 bg-orange-100/70 px-1.5 py-0.5 rounded-sm uppercase tracking-tight font-mono">Cumulative</span>
+              <td className="p-2.5 font-bold text-slate-700 border-r border-slate-200 sticky left-0 bg-slate-50 z-10 w-[230px] min-w-[230px] max-w-[230px]">
+                <div className="flex items-center justify-between gap-1.5 w-full">
+                  <span className="truncate">Cumulative Actual Prog (%)</span>
+                  <span className="text-[9px] text-orange-600 bg-orange-100/70 px-1.5 py-0.5 rounded-sm uppercase tracking-tight font-mono shrink-0">Cumulative</span>
+                </div>
               </td>
               {project.monthlyData.map((m, idx) => {
                 const isHistorical = idx <= C - 1;
@@ -341,12 +354,17 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
                   >
                     <SafeNumberInput
                       step="0.1"
-                      value={m.actualCumulativeProgress}
-                      placeholder="0"
+                      value={isHistorical ? m.actualCumulativeProgress : null}
+                      placeholder={isHistorical ? "0" : "—"}
+                      disabled={!isHistorical}
                       onFocus={() => setActiveCellInfo(`Month ${idx + 1} Cumulative Actual Progress`)}
                       onBlur={() => setActiveCellInfo(null)}
                       onChange={(val) => handleCumulativeActualChange(idx, val ?? 0)}
-                      className="w-full text-center font-bold font-mono rounded px-1.5 py-1 border transition-colors bg-white text-orange-850 border-orange-200 hover:border-orange-300 focus:outline-hidden focus:ring-1 focus:ring-blue-500 shadow-3xs"
+                      className={`w-full text-center font-bold font-mono rounded px-1.5 py-1 border transition-colors ${
+                        isHistorical
+                          ? 'bg-white text-orange-850 border-orange-200 hover:border-orange-300 focus:outline-hidden focus:ring-1 focus:ring-blue-500 shadow-3xs'
+                          : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed select-none'
+                      }`}
                     />
                   </td>
                 );
@@ -355,9 +373,11 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
 
             {/* ROW 5: Target Monthly Cash Flow Drawdown ($k) */}
             <tr className="hover:bg-slate-50/50 transition-colors">
-              <td className="p-2.5 font-bold text-slate-700 border-r border-slate-200 sticky left-0 bg-white z-10 flex items-center justify-between">
-                <span>Planned Cash Spend ($k)</span>
-                <span className="text-[9px] text-blue-500 bg-blue-50/50 px-1.5 py-0.5 rounded-sm uppercase tracking-tight font-mono">Cash Plan</span>
+              <td className="p-2.5 font-bold text-slate-700 border-r border-slate-200 sticky left-0 bg-white z-10 w-[230px] min-w-[230px] max-w-[230px]">
+                <div className="flex items-center justify-between gap-1.5 w-full">
+                  <span className="truncate">Planned Cash Spend ($k)</span>
+                  <span className="text-[9px] text-blue-500 bg-blue-50/50 px-1.5 py-0.5 rounded-sm uppercase tracking-tight font-mono shrink-0">Cash Plan</span>
+                </div>
               </td>
               {project.monthlyData.map((m, idx) => (
                 <td key={`cash-plan-${idx}`} className="p-2 border-r border-slate-200 bg-blue-50/5">
@@ -375,9 +395,11 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
 
             {/* ROW 6: Actual Monthly Cash Flow Drawdown ($k) */}
             <tr className="bg-slate-50/10 hover:bg-slate-50/50 transition-colors">
-              <td className="p-2.5 font-bold text-slate-700 border-r border-slate-200 sticky left-0 bg-slate-50 z-10 flex items-center justify-between">
-                <span>Actual Cash Spent ($k)</span>
-                <span className="text-[9px] text-orange-500 bg-orange-50/50 px-1.5 py-0.5 rounded-sm uppercase tracking-tight font-mono">Cash Spent</span>
+              <td className="p-2.5 font-bold text-slate-700 border-r border-slate-200 sticky left-0 bg-slate-50 z-10 w-[230px] min-w-[230px] max-w-[230px]">
+                <div className="flex items-center justify-between gap-1.5 w-full">
+                  <span className="truncate">Actual Cash Spent ($k)</span>
+                  <span className="text-[9px] text-orange-500 bg-orange-50/50 px-1.5 py-0.5 rounded-sm uppercase tracking-tight font-mono shrink-0">Cash Spent</span>
+                </div>
               </td>
               {project.monthlyData.map((m, idx) => {
                 const isHistorical = idx <= C - 1;
@@ -390,12 +412,17 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
                   >
                     <SafeNumberInput
                       step="5"
-                      value={m.actualCashFlow}
-                      placeholder="0"
+                      value={isHistorical ? m.actualCashFlow : null}
+                      placeholder={isHistorical ? "0" : "—"}
+                      disabled={!isHistorical}
                       onFocus={() => setActiveCellInfo(`Month ${idx + 1} Actual Cash Expenditure`)}
                       onBlur={() => setActiveCellInfo(null)}
                       onChange={(val) => handleActualCashFlowChange(idx, val ?? 0)}
-                      className="w-full text-center font-mono font-bold rounded px-1.5 py-1 border transition-colors bg-white text-slate-800 border-slate-200 hover:border-slate-300 focus:outline-hidden focus:ring-1 focus:ring-blue-500 shadow-3xs"
+                      className={`w-full text-center font-mono font-bold rounded px-1.5 py-1 border transition-colors ${
+                        isHistorical
+                          ? 'bg-white text-slate-800 border-slate-200 hover:border-slate-300 focus:outline-hidden focus:ring-1 focus:ring-blue-500 shadow-3xs'
+                          : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed select-none'
+                      }`}
                     />
                   </td>
                 );

@@ -189,7 +189,7 @@ export default function MainChartPanel({ project, allProjects, onUpdateProject }
   // Chart Dimensions & Setup
   const containerWidth = 800;
   const containerHeight = 310;
-  const margin = { top: 30, right: 40, bottom: 45, left: 55 };
+  const margin = { top: 30, right: 65, bottom: 45, left: 55 };
   const chartWidth = containerWidth - margin.left - margin.right;
   const chartHeight = containerHeight - margin.top - margin.bottom;
 
@@ -200,6 +200,71 @@ export default function MainChartPanel({ project, allProjects, onUpdateProject }
   const getX = (index: number) => {
     return margin.left + (index * chartWidth) / (totalPoints - 1);
   };
+
+  // Dynamic Cut-off marker index in active dataset
+  // Local active: index is C - 1
+  // Multi-year active: index is activeYearIndex * 12 + C - 1
+  const activeCutoffIndex = isMultiYear 
+    ? (activeYearIndex * 12 + C - 1) 
+    : (C - 1);
+
+  // Compute cumulative plan and actual cost values
+  let runningTargetCash = 0;
+  let runningActualCash = 0;
+  const cumulativeCashData = activeDataset.map((pt, idx) => {
+    runningTargetCash += pt.targetCashFlow;
+    const isPastOrCurrent = idx <= activeCutoffIndex;
+    if (isPastOrCurrent) {
+      runningActualCash += (pt.actualCashFlow ?? 0);
+    }
+    return {
+      cumulativeTargetCash: runningTargetCash,
+      cumulativeActualCash: isPastOrCurrent ? runningActualCash : null,
+    };
+  });
+
+  const totalTargetCash = cumulativeCashData.length > 0 ? cumulativeCashData[cumulativeCashData.length - 1].cumulativeTargetCash : 1;
+  const scaleMaxCumulativeCash = (totalTargetCash || 1) * 1.1;
+
+  const getY_CumulativeCash = (value: number) => {
+    const height = (value * chartHeight) / scaleMaxCumulativeCash;
+    return margin.top + chartHeight - height;
+  };
+
+  const yTicksCumulativeCash = [
+    0,
+    Math.round(scaleMaxCumulativeCash * 0.25),
+    Math.round(scaleMaxCumulativeCash * 0.5),
+    Math.round(scaleMaxCumulativeCash * 0.75),
+    Math.round(scaleMaxCumulativeCash)
+  ];
+
+  // Coordinate Points for Cumulative Plan line
+  const cumulativePlanPoints = activeDataset.map((p, idx) => ({
+    x: getX(idx),
+    y: getY_CumulativeCash(cumulativeCashData[idx].cumulativeTargetCash),
+    val: cumulativeCashData[idx].cumulativeTargetCash,
+    idx
+  }));
+
+  const cumulativePlanPath = cumulativePlanPoints.length > 0
+    ? cumulativePlanPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
+    : '';
+
+  // Coordinate Points for Cumulative Actual line
+  const cumulativeActualPoints = activeDataset
+    .map((p, idx) => ({ p, idx }))
+    .filter((item) => item.idx <= activeCutoffIndex)
+    .map((item) => ({
+      x: getX(item.idx),
+      y: getY_CumulativeCash(cumulativeCashData[item.idx].cumulativeActualCash!),
+      val: cumulativeCashData[item.idx].cumulativeActualCash!,
+      idx: item.idx
+    }));
+
+  const cumulativeActualPath = cumulativeActualPoints.length > 0
+    ? cumulativeActualPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
+    : '';
 
   const getY_Progress = (percentage: number) => {
     return margin.top + chartHeight - (percentage * chartHeight) / 100;
@@ -276,13 +341,6 @@ export default function MainChartPanel({ project, allProjects, onUpdateProject }
   ];
 
   const barWidth = isMultiYear ? 4 : 12;
-
-  // Dynamic Cut-off marker index in active dataset
-  // Local active: index is C - 1
-  // Multi-year active: index is activeYearIndex * 12 + C - 1
-  const activeCutoffIndex = isMultiYear 
-    ? (activeYearIndex * 12 + C - 1) 
-    : (C - 1);
 
   return (
     <div id="executive-charts-panel" className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden font-sans">
@@ -377,12 +435,20 @@ export default function MainChartPanel({ project, allProjects, onUpdateProject }
             ) : (
               <>
                 <div className="flex items-center gap-1.5">
-                  <span className="w-3.5 h-3.5 bg-blue-50 border border-blue-400 rounded-xs" />
-                  <span className="text-slate-600 font-bold">Planned Cost allocation</span>
+                  <span className="w-3.5 h-3.5 bg-blue-50 border border-blue-400 rounded-sm" />
+                  <span className="text-slate-600 font-bold">Planned Monthly Cost</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="w-3.5 h-3.5 bg-orange-50 border border-orange-500 rounded-xs" />
-                  <span className="text-slate-600 font-bold">Actual Verified Drawdowns</span>
+                  <span className="w-3.5 h-1 bg-indigo-600 rounded-full" />
+                  <span className="text-slate-600 font-bold">Cumulative Planned Cost</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3.5 h-3.5 bg-orange-50 border border-orange-500 rounded-sm" />
+                  <span className="text-slate-600 font-bold">Actual Monthly Cost</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3.5 h-1 bg-rose-600 rounded-full" />
+                  <span className="text-slate-600 font-bold">Cumulative Actual Cost</span>
                 </div>
               </>
             )}
@@ -419,26 +485,40 @@ export default function MainChartPanel({ project, allProjects, onUpdateProject }
                 </g>
               ))
             ) : (
-              yTicksCash.map((tick) => (
-                <g key={`y-cash-tick-${tick}`}>
-                  <line
-                    x1={margin.left}
-                    y1={getY_Cash(tick)}
-                    x2={containerWidth - margin.right}
-                    y2={getY_Cash(tick)}
-                    stroke="#F1F5F9"
-                    strokeWidth="1"
-                  />
-                  <text
-                    x={margin.left - 10}
-                    y={getY_Cash(tick) + 4}
-                    textAnchor="end"
-                    className="text-[9px] font-mono font-bold text-slate-400"
-                  >
-                    ${tick.toLocaleString()}k
-                  </text>
-                </g>
-              ))
+              <>
+                {yTicksCash.map((tick) => (
+                  <g key={`y-cash-tick-${tick}`}>
+                    <line
+                      x1={margin.left}
+                      y1={getY_Cash(tick)}
+                      x2={containerWidth - margin.right}
+                      y2={getY_Cash(tick)}
+                      stroke="#F1F5F9"
+                      strokeWidth="1"
+                    />
+                    <text
+                      x={margin.left - 10}
+                      y={getY_Cash(tick) + 4}
+                      textAnchor="end"
+                      className="text-[9px] font-mono font-bold text-slate-400"
+                    >
+                      ${tick.toLocaleString()}k
+                    </text>
+                  </g>
+                ))}
+                {yTicksCumulativeCash.map((tick) => (
+                  <g key={`y-cum-tick-${tick}`}>
+                    <text
+                      x={containerWidth - margin.right + 10}
+                      y={getY_CumulativeCash(tick) + 4}
+                      textAnchor="start"
+                      className="text-[9px] font-mono font-bold text-indigo-500"
+                    >
+                      ${tick.toLocaleString()}k
+                    </text>
+                  </g>
+                ))}
+              </>
             )}
 
             {/* X-Axis Tick Labels and Guidelines with exact Month-Year styling requested */}
@@ -598,7 +678,7 @@ export default function MainChartPanel({ project, allProjects, onUpdateProject }
               </>
             )}
 
-            {/* CONDITIONAL RENDER: CASH FLOW DRAWDOWN (BAR CHARTS OR DUAL DRAWDOWN GRAPH) */}
+             {/* CONDITIONAL RENDER: CASH FLOW DRAWDOWN (BAR CHARTS OR DUAL DRAWDOWN GRAPH) */}
             {activeTab === 'cashflow' && (
               <>
                 {/* Render Double Vertical Bars for Cash Plan & Actual */}
@@ -647,6 +727,67 @@ export default function MainChartPanel({ project, allProjects, onUpdateProject }
                         />
                       )}
                     </g>
+                  );
+                })}
+
+                {/* Cumulative Planned Cost Line */}
+                {cumulativePlanPath && (
+                  <path
+                    d={cumulativePlanPath}
+                    fill="none"
+                    stroke="#4F46E5"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="transition-all duration-300"
+                  />
+                )}
+
+                {/* Cumulative Actual Cost Line */}
+                {cumulativeActualPath && (
+                  <path
+                    d={cumulativeActualPath}
+                    fill="none"
+                    stroke="#E11D48"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="transition-all duration-300"
+                  />
+                )}
+
+                {/* Cumulative Nodes and Circles */}
+                {cumulativePlanPoints.map((p) => {
+                  const showNode = !isMultiYear || p.idx % 2 === 0 || p.idx === activeCutoffIndex;
+                  if (!showNode) return null;
+                  return (
+                    <circle
+                      key={`cum-p-node-${p.idx}`}
+                      cx={p.x}
+                      cy={p.y}
+                      r={p.idx === hoveredIndex ? 6 : 3.5}
+                      fill="#4F46E5"
+                      stroke="#FFFFFF"
+                      strokeWidth="1.5"
+                      className="transition-all"
+                    />
+                  );
+                })}
+
+                {cumulativeActualPoints.map((p) => {
+                  const showNode = !isMultiYear || p.idx % 2 === 0 || p.idx === activeCutoffIndex;
+                  if (!showNode) return null;
+                  return (
+                    <circle
+                      key={`cum-a-node-${p.idx}`}
+                      cx={p.x}
+                      cy={p.y}
+                      r={p.idx === hoveredIndex ? 7.5 : 4.5}
+                      fill="#E11D48"
+                      stroke="#FFFFFF"
+                      strokeWidth="2"
+                      className="transition-all shadow-xs"
+                    />
                   );
                 })}
               </>
@@ -730,23 +871,39 @@ export default function MainChartPanel({ project, allProjects, onUpdateProject }
                 ) : (
                   <>
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Cash Allocation:</span>
+                      <span className="text-slate-400 font-medium">Monthly Plan:</span>
                       <span className="font-mono font-bold text-blue-300">
                         ${activeDataset[hoveredIndex].targetCashFlow}k
                       </span>
                     </div>
 
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Actual Spend:</span>
+                    <div className="flex justify-between border-b border-slate-800/60 pb-1 mb-1">
+                      <span className="text-indigo-350 font-medium">Cum. Plan:</span>
+                      <span className="font-mono font-bold text-indigo-300">
+                        ${cumulativeCashData[hoveredIndex]?.cumulativeTargetCash.toLocaleString()}k
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between mt-1">
+                      <span className="text-slate-400 font-medium">Monthly Actual:</span>
                       <span className="font-mono font-bold text-orange-400">
                         {activeDataset[hoveredIndex].actualCashFlow !== null 
                           ? `$${activeDataset[hoveredIndex].actualCashFlow}k` 
-                          : 'N/A'}
+                          : '—'}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between border-b border-slate-800/60 pb-1 mb-1">
+                      <span className="text-rose-350 font-medium font-bold">Cum. Actual:</span>
+                      <span className="font-mono font-bold text-rose-400">
+                        {cumulativeCashData[hoveredIndex]?.cumulativeActualCash !== null 
+                          ? `$${cumulativeCashData[hoveredIndex]?.cumulativeActualCash!.toLocaleString()}k` 
+                          : '—'}
                       </span>
                     </div>
 
                     {activeDataset[hoveredIndex].actualCashFlow !== null && (
-                      <div className="flex justify-between border-t border-slate-800 pt-1 mt-1 text-[10px]">
+                      <div className="flex justify-between pt-1 mt-1 text-[10px]">
                         <span className="text-slate-400">Cost Variance:</span>
                         <span className={`font-mono font-bold ${
                           activeDataset[hoveredIndex].targetCashFlow - activeDataset[hoveredIndex].actualCashFlow! >= 0 

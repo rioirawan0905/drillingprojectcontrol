@@ -193,9 +193,9 @@ export default function FormulaGlossary({ project, highlightedAbbr, onNavigateTo
               <div className="space-y-1.5 pt-2 border-t border-slate-100 font-mono text-[10px]">
                 <div className="flex items-start gap-1.5">
                   <Calculator className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <span className="text-slate-400 uppercase text-[8px] font-bold block">EVM Formula</span>
-                    <code className="text-slate-700 font-bold">{item.formula}</code>
+                    <code className="text-slate-700 font-bold break-words whitespace-normal block">{item.formula}</code>
                   </div>
                 </div>
 
@@ -203,9 +203,9 @@ export default function FormulaGlossary({ project, highlightedAbbr, onNavigateTo
                   <div className="w-3.5 h-3.5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-[8px] tracking-tighter shrink-0 mt-0.5 font-sans">
                     LIVE
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <span className="text-slate-400 uppercase text-[8px] font-bold block">Simulator Current Result</span>
-                    <span className="text-emerald-700 font-extrabold">{item.calculation}</span>
+                    <span className="text-emerald-700 font-extrabold break-words whitespace-normal block">{item.calculation}</span>
                   </div>
                 </div>
                 

@@ -36,7 +36,7 @@ export const INITIAL_PROJECTS: ProjectYearData[] = [
   {
     year: 2026,
     name: "Drilling MLN Phase 5 — High-Pressure Drilling & Well Execution (Active)",
-    reportingMonth: 6,
+    reportingMonth: 4,
     accelerationFactor: 1.0,
     wbsList: [
       { id: "wbs-1", name: "Project Management", budget: 400, spent: 220, progress: 58 },
@@ -50,8 +50,8 @@ export const INITIAL_PROJECTS: ProjectYearData[] = [
       { month: 2, targetCumulativeProgress: 12, actualCumulativeProgress: 10, targetCashFlow: 350, actualCashFlow: 370 },
       { month: 3, targetCumulativeProgress: 24, actualCumulativeProgress: 20, targetCashFlow: 600, actualCashFlow: 640 },
       { month: 4, targetCumulativeProgress: 38, actualCumulativeProgress: 32, targetCashFlow: 900, actualCashFlow: 960 },
-      { month: 5, targetCumulativeProgress: 53, actualCumulativeProgress: 45, targetCashFlow: 1150, actualCashFlow: 1200 },
-      { month: 6, targetCumulativeProgress: 68, actualCumulativeProgress: 58, targetCashFlow: 1300, actualCashFlow: 1320 },
+      { month: 5, targetCumulativeProgress: 53, actualCumulativeProgress: null, targetCashFlow: 1150, actualCashFlow: null },
+      { month: 6, targetCumulativeProgress: 68, actualCumulativeProgress: null, targetCashFlow: 1300, actualCashFlow: null },
       { month: 7, targetCumulativeProgress: 80, actualCumulativeProgress: null, targetCashFlow: 1100, actualCashFlow: null },
       { month: 8, targetCumulativeProgress: 89, actualCumulativeProgress: null, targetCashFlow: 800, actualCashFlow: null },
       { month: 9, targetCumulativeProgress: 95, actualCumulativeProgress: null, targetCashFlow: 500, actualCashFlow: null },
