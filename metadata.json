@@ -1,0 +1,6 @@
+{
+  "name": "Drilling MLN Phase 5 Control Dashboard",
+  "description": "An interactive project control widget for the Drilling MLN Phase 5 Campaign (2025-2028), simulating real-time S-Curve performance, WBS cost profiles, and forecasting completion metrics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
