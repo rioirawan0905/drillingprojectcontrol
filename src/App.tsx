@@ -13,11 +13,25 @@ import SpreadsheetEditor from './components/SpreadsheetEditor';
 import WBSCostChart from './components/WBSCostChart';
 import AICopilotTerminal from './components/AICopilotTerminal';
 import AlertSystem from './components/AlertSystem';
+import FormulaGlossary from './components/FormulaGlossary';
 import { Compass, CalendarDays, FileSpreadsheet, Download, FileText, RotateCcw } from 'lucide-react';
 
 export default function App() {
   const [projects, setProjects] = useState<ProjectYearData[]>(INITIAL_PROJECTS);
   const [selectedYear, setSelectedYear] = useState<number>(2026);
+  const [highlightedAbbr, setHighlightedAbbr] = useState<string | null>(null);
+
+  const handleNavigateToAbbr = (abbr: string) => {
+    setHighlightedAbbr(abbr);
+    const element = document.getElementById(`abbr-${abbr.toLowerCase()}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    // Auto-clear highlight after 3 seconds
+    setTimeout(() => {
+      setHighlightedAbbr((prev) => (prev === abbr ? null : prev));
+    }, 3000);
+  };
 
   const currentProject = projects.find((p) => p.year === selectedYear) || projects[0];
 
@@ -166,7 +180,7 @@ export default function App() {
           <div className="lg:col-span-8 space-y-6">
             
             {/* Row 1: Top KPIs Dynamic Badges and Forecasts */}
-            <KPICards project={currentProject} />
+            <KPICards project={currentProject} onNavigateToAbbr={handleNavigateToAbbr} />
 
             {/* Row 2: Tabbed S-Curve chart VS Cash Drawdown chart panel */}
             <MainChartPanel
@@ -183,12 +197,19 @@ export default function App() {
 
             {/* Row 4: Side By Side cost center bars and AI Advisory advisory blocks */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <WBSCostChart wbsList={currentProject.wbsList} />
+              <WBSCostChart wbsList={currentProject.wbsList} onNavigateToAbbr={handleNavigateToAbbr} />
               <AICopilotTerminal project={currentProject} allProjects={projects} />
             </div>
 
             {/* Row 5: Detailed alert thresholds warnings advisory text block */}
             <AlertSystem project={currentProject} />
+
+            {/* Row 6: Abbreviation glossary explanations and live computations reference */}
+            <FormulaGlossary
+              project={currentProject}
+              highlightedAbbr={highlightedAbbr}
+              onNavigateToAbbr={handleNavigateToAbbr}
+            />
           </div>
         </div>
       </main>

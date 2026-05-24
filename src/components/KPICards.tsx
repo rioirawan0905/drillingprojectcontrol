@@ -8,9 +8,10 @@ import { TrendingUp, AlertTriangle, ShieldCheck, DollarSign } from 'lucide-react
 
 interface KPICardsProps {
   project: ProjectYearData;
+  onNavigateToAbbr: (abbr: string) => void;
 }
 
-export default function KPICards({ project }: KPICardsProps) {
+export default function KPICards({ project, onNavigateToAbbr }: KPICardsProps) {
   const C = project.reportingMonth;
   const currentMonthData = project.monthlyData.find((m) => m.month === C) || project.monthlyData[C - 1];
 
@@ -87,9 +88,13 @@ export default function KPICards({ project }: KPICardsProps) {
   return (
     <div id="kpi-banner-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-sans mb-6">
       {/* CARD 1: S-Curve Progress Monitor */}
-      <div className="bg-white border border-slate-200 border-l-4 border-l-blue-600 rounded-2xl p-4 shadow-sm flex flex-col justify-between transition-all hover:shadow-md">
+      <div 
+        onClick={() => onNavigateToAbbr('ev')}
+        title="Click to view Earned Value (EV) & progress definitions"
+        className="bg-white border border-slate-200 border-l-4 border-l-blue-600 rounded-2xl p-4 shadow-sm flex flex-col justify-between transition-all hover:shadow-md cursor-pointer hover:bg-slate-50/30 group"
+      >
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Overall Progress</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider group-hover:text-blue-600 transition-colors">Overall Progress (EV)</span>
           <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${badgeColors} ${badgeAnimation}`}>
             {status}
           </span>
@@ -97,14 +102,18 @@ export default function KPICards({ project }: KPICardsProps) {
         <div className="mt-1">
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-black tracking-tight text-slate-800">{actualProgress.toFixed(1)}%</span>
-            <span className="text-xs font-semibold text-slate-400">Actual Cum.</span>
+            <span className="text-xs font-semibold text-slate-400 group-hover:underline">Actual Cum. (EV)</span>
           </div>
           <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-            Planned target is <span className="font-bold text-slate-700">{targetProgress}%</span>
+            Planned target (PV) is <span onClick={(e) => { e.stopPropagation(); onNavigateToAbbr('pv'); }} className="font-bold text-slate-700 hover:text-blue-600 hover:underline">{targetProgress}%</span>
           </p>
         </div>
-        <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-          <span className="text-slate-400 uppercase text-[9px] font-bold tracking-wider">Schedule Variance:</span>
+        <div 
+          onClick={(e) => { e.stopPropagation(); onNavigateToAbbr('sv'); }}
+          title="Click to view Schedule Variance (SV) definition"
+          className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs hover:text-blue-600 hover:underline"
+        >
+          <span className="text-slate-400 uppercase text-[9px] font-bold tracking-wider">Schedule Variance (SV):</span>
           <span className={`font-bold font-mono ${scheduleDiff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
             {scheduleDiff >= 0 ? '+' : ''}{scheduleDiff.toFixed(1)}%
           </span>
@@ -112,28 +121,40 @@ export default function KPICards({ project }: KPICardsProps) {
       </div>
 
       {/* CARD 2: Cost & Earned Value (CPI / SPI) */}
-      <div className="bg-white border border-slate-200 border-l-4 border-l-slate-400 rounded-2xl p-4 shadow-sm flex flex-col justify-between transition-all hover:shadow-md">
+      <div 
+        onClick={() => onNavigateToAbbr('ac')}
+        title="Click to view Actual Cost (AC) & expenditure definitions"
+        className="bg-white border border-slate-200 border-l-4 border-l-slate-400 rounded-2xl p-4 shadow-sm flex flex-col justify-between transition-all hover:shadow-md cursor-pointer hover:bg-slate-50/30 group"
+      >
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current Spend</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider group-hover:text-slate-600 transition-colors">Current Spend (AC)</span>
           <TrendingUp className="w-4 h-4 text-slate-400" />
         </div>
         <div className="mt-1">
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-black tracking-tight text-slate-800">${totalSpent.toLocaleString()}k</span>
-            <span className="text-xs font-semibold text-slate-400">Spent AC</span>
+            <span className="text-xs font-semibold text-slate-400 group-hover:underline">Spent AC</span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Budget is <span className="font-bold text-slate-700">${totalBudget.toLocaleString()}k</span>
+            Budget (BAC) is <span className="font-bold text-slate-700">${totalBudget.toLocaleString()}k</span>
           </p>
         </div>
         <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-center text-xs">
-          <div className="border-r border-slate-100">
+          <div 
+            onClick={(e) => { e.stopPropagation(); onNavigateToAbbr('cpi'); }}
+            title="Click to view Cost Performance Index (CPI) formula"
+            className="border-r border-slate-100 hover:bg-slate-50 hover:text-blue-600 transition-colors py-0.5 rounded cursor-pointer"
+          >
             <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider">CPI Index</span>
             <span className={`font-bold font-mono text-xs ${CPI >= 1 ? 'text-emerald-600' : 'text-rose-600'}`}>
               {CPI.toFixed(2)}
             </span>
           </div>
-          <div>
+          <div 
+            onClick={(e) => { e.stopPropagation(); onNavigateToAbbr('spi'); }}
+            title="Click to view Schedule Performance Index (SPI) formula"
+            className="hover:bg-slate-50 hover:text-blue-600 transition-colors py-0.5 rounded cursor-pointer"
+          >
             <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider">SPI Index</span>
             <span className={`font-bold font-mono text-xs ${SPI >= 1 ? 'text-emerald-600' : 'text-rose-600'}`}>
               {SPI.toFixed(2)}
@@ -143,11 +164,15 @@ export default function KPICards({ project }: KPICardsProps) {
       </div>
 
       {/* CARD 3: Front-Loading Risk Score */}
-      <div className={`bg-white border border-slate-200 border-l-4 rounded-2xl p-4 shadow-sm flex flex-col justify-between transition-all hover:shadow-md ${
-        frontLoadingScore < 15 ? 'border-l-emerald-500' : frontLoadingScore <= 35 ? 'border-l-amber-500' : 'border-l-rose-500'
-      }`}>
+      <div 
+        onClick={() => onNavigateToAbbr('flr')}
+        title="Click to view Front-Loading Ratio (FLR) definition & risks"
+        className={`bg-white border border-slate-200 border-l-4 rounded-2xl p-4 shadow-sm flex flex-col justify-between transition-all hover:shadow-md cursor-pointer hover:bg-slate-50/30 group ${
+          frontLoadingScore < 15 ? 'border-l-emerald-500' : frontLoadingScore <= 35 ? 'border-l-amber-500' : 'border-l-rose-500'
+        }`}
+      >
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Front-Loading Risk</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider group-hover:text-slate-800 transition-colors">Front-Loading Risk</span>
           <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${riskColor}`}>
             {riskTier}
           </span>
@@ -155,7 +180,7 @@ export default function KPICards({ project }: KPICardsProps) {
         <div className="mt-1">
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-black tracking-tight text-slate-800">{frontLoadingScore.toFixed(0)}</span>
-            <span className="text-xs font-semibold text-slate-400">Gap Score</span>
+            <span className="text-xs font-semibold text-slate-400 group-hover:underline">Gap Score (FLR)</span>
           </div>
           <div className="w-full bg-slate-100 h-1 mt-2.5 overflow-hidden rounded">
             <div
@@ -175,9 +200,13 @@ export default function KPICards({ project }: KPICardsProps) {
       </div>
 
       {/* CARD 4: Forecasting Engine (delay & EAC) */}
-      <div className="bg-white border border-slate-200 border-l-4 border-l-indigo-600 rounded-2xl p-4 shadow-sm flex flex-col justify-between transition-all hover:shadow-md">
+      <div 
+        onClick={() => onNavigateToAbbr('eac')}
+        title="Click to view Estimate at Completion (EAC) formula"
+        className="bg-white border border-slate-200 border-l-4 border-l-indigo-600 rounded-2xl p-4 shadow-sm flex flex-col justify-between transition-all hover:shadow-md cursor-pointer hover:bg-slate-50/30 group"
+      >
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Completion Forecast</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider group-hover:text-indigo-600 transition-colors">Completion Forecast</span>
           <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${
             projectedDelayMonths > 0 ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'
           }`}>
@@ -187,10 +216,10 @@ export default function KPICards({ project }: KPICardsProps) {
         <div className="mt-1">
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-black tracking-tight text-slate-800">${EAC.toLocaleString()}k</span>
-            <span className="text-xs font-semibold text-slate-400">EAC Projection</span>
+            <span className="text-xs font-semibold text-slate-400 group-hover:underline">EAC Projection</span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Variance at End: <span className={`font-bold ${varianceAtCompletion >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+            Variance at End (VAC): <span onClick={(e) => { e.stopPropagation(); onNavigateToAbbr('vac'); }} className={`font-bold hover:underline hover:text-blue-600 ${varianceAtCompletion >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
               {varianceAtCompletion >= 0 ? '+' : ''}{varianceAtCompletion.toLocaleString()}k
             </span>
           </p>

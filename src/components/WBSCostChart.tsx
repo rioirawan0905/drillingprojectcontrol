@@ -8,9 +8,10 @@ import { AlertTriangle, Award, CheckCircle2, DollarSign, Activity, Settings2 } f
 
 interface WBSCostChartProps {
   wbsList: WBSItem[];
+  onNavigateToAbbr: (abbr: string) => void;
 }
 
-export default function WBSCostChart({ wbsList }: WBSCostChartProps) {
+export default function WBSCostChart({ wbsList, onNavigateToAbbr }: WBSCostChartProps) {
   // Determine top 3 highest spent cost centers
   const sortedBySpent = [...wbsList].sort((a, b) => b.spent - a.spent);
   const top3Ids = sortedBySpent.slice(0, 3).map((item) => item.id);
@@ -106,18 +107,30 @@ export default function WBSCostChart({ wbsList }: WBSCostChartProps) {
                 {/* Index indicators */}
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-semibold text-slate-500 font-mono">
                   {cpi !== null && (
-                    <span className={`px-1.5 py-0.5 rounded-xs font-bold text-[9px] ${
-                      cpi >= 1.0 
-                        ? 'bg-emerald-50 text-emerald-700' 
-                        : 'bg-rose-50 text-rose-700 font-black'
-                    }`}>
+                    <span 
+                      onClick={() => onNavigateToAbbr('cpi')}
+                      title="Click to view CPI index definition and live formula"
+                      className={`px-1.5 py-0.5 rounded-xs font-bold text-[9px] cursor-pointer hover:ring-2 hover:ring-indigo-100 transition-all ${
+                        cpi >= 1.0 
+                          ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' 
+                          : 'bg-rose-50 text-rose-700 font-black hover:bg-rose-100'
+                      }`}
+                    >
                       CPI: {cpi.toFixed(2)}
                     </span>
                   )}
-                  <span>
+                  <span 
+                    onClick={() => onNavigateToAbbr('pv')}
+                    title="Click to view Budget & Planned Value (PV) explanation"
+                    className="cursor-pointer hover:underline hover:text-blue-600 transition-colors py-0.5 px-1 rounded-sm hover:bg-slate-100"
+                  >
                     Bgt: <span className="text-slate-800 font-bold">${item.budget.toLocaleString()}k</span>
                   </span>
-                  <span>
+                  <span 
+                    onClick={() => onNavigateToAbbr('ac')}
+                    title="Click to view Actual Cost (AC) explanation"
+                    className="cursor-pointer hover:underline hover:text-blue-600 transition-colors py-0.5 px-1 rounded-sm hover:bg-slate-100"
+                  >
                     Cum: <span className="text-slate-800 font-bold">${item.spent.toLocaleString()}k</span>
                   </span>
                 </div>
@@ -159,15 +172,19 @@ export default function WBSCostChart({ wbsList }: WBSCostChartProps) {
                 </div>
 
                 {/* Physical Progress indicator */}
-                <div className="flex items-center gap-3 pt-0.5">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono w-24">Physical Done</span>
+                <div 
+                  onClick={() => onNavigateToAbbr('ev')}
+                  title="Click to view Earned Value (EV) physical progress definitions"
+                  className="flex items-center gap-3 pt-0.5 cursor-pointer hover:bg-slate-50/50 p-1 rounded transition-colors group"
+                >
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono w-24 group-hover:text-blue-600">Physical Done</span>
                   <div className="flex-1 bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200/30">
                     <div
                       className="h-full bg-blue-500 rounded-full transition-all duration-500"
                       style={{ width: `${item.progress}%` }}
                     />
                   </div>
-                  <span className="text-[10px] font-black text-blue-700 font-mono w-10 text-right">{item.progress}%</span>
+                  <span className="text-[10px] font-black text-blue-700 font-mono w-10 text-right group-hover:underline">{item.progress}%</span>
                 </div>
 
                 {/* Warning flag if Spent > 0 but progress is 0% */}
