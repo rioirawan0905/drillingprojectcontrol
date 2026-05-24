@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ProjectYearData, MonthlyData } from '../types';
 import { Grid, Save, HelpCircle, Milestone, DollarSign } from 'lucide-react';
+import SafeNumberInput from './SafeNumberInput';
 
 interface SpreadsheetEditorProps {
   project: ProjectYearData;
@@ -255,15 +256,14 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
                 const incVal = getIncrementalPlan(idx);
                 return (
                   <td key={`inc-plan-${idx}`} className="p-2 border-r border-slate-200 bg-blue-50/10">
-                    <input
-                      type="number"
+                    <SafeNumberInput
                       step="0.1"
                       min="0"
                       max="100"
                       value={incVal}
                       onFocus={() => setActiveCellInfo(`Month ${idx + 1} Incremental Target Plan`)}
                       onBlur={() => setActiveCellInfo(null)}
-                      onChange={(e) => handleIncrementalPlanChange(idx, parseFloat(e.target.value) || 0)}
+                      onChange={(val) => handleIncrementalPlanChange(idx, val ?? 0)}
                       className="w-full bg-white text-slate-800 border border-slate-200 hover:border-slate-300 focus:outline-hidden focus:ring-1 focus:focus:ring-blue-500 rounded px-1.5 py-1 text-center font-bold font-mono transition-shadow"
                     />
                   </td>
@@ -279,15 +279,14 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
               </td>
               {project.monthlyData.map((m, idx) => (
                 <td key={`cum-plan-${idx}`} className="p-2 border-r border-slate-200 bg-blue-50/20">
-                  <input
-                    type="number"
+                  <SafeNumberInput
                     step="0.1"
                     min="0"
                     max="100"
                     value={m.targetCumulativeProgress}
                     onFocus={() => setActiveCellInfo(`Month ${idx + 1} Cumulative Target Plan`)}
                     onBlur={() => setActiveCellInfo(null)}
-                    onChange={(e) => handleCumulativePlanChange(idx, parseFloat(e.target.value) || 0)}
+                    onChange={(val) => handleCumulativePlanChange(idx, val ?? 0)}
                     className="w-full bg-white text-blue-800 border border-blue-200 hover:border-blue-300 focus:outline-hidden focus:ring-1 focus:ring-blue-500 rounded px-1.5 py-1 text-center font-bold font-mono transition-shadow shadow-3xs"
                   />
                 </td>
@@ -311,14 +310,13 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
                       isHistorical ? 'bg-orange-50/10' : 'bg-slate-50/10'
                     }`}
                   >
-                    <input
-                      type="number"
+                    <SafeNumberInput
                       step="0.1"
-                      value={incActualVal !== null ? incActualVal : ''}
+                      value={incActualVal}
                       placeholder="0"
                       onFocus={() => setActiveCellInfo(`Month ${idx + 1} Incremental Actual Progress`)}
                       onBlur={() => setActiveCellInfo(null)}
-                      onChange={(e) => handleIncrementalActualChange(idx, parseFloat(e.target.value) || 0)}
+                      onChange={(val) => handleIncrementalActualChange(idx, val ?? 0)}
                       className="w-full text-center font-bold font-mono rounded px-1.5 py-1 border transition-colors bg-white text-slate-800 border-slate-200 hover:border-slate-300 focus:outline-hidden focus:ring-1 focus:ring-blue-500 shadow-3xs"
                     />
                   </td>
@@ -341,14 +339,13 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
                       isHistorical ? 'bg-orange-50/20' : 'bg-slate-50/20'
                     }`}
                   >
-                    <input
-                      type="number"
+                    <SafeNumberInput
                       step="0.1"
-                      value={m.actualCumulativeProgress !== null ? m.actualCumulativeProgress : ''}
+                      value={m.actualCumulativeProgress}
                       placeholder="0"
                       onFocus={() => setActiveCellInfo(`Month ${idx + 1} Cumulative Actual Progress`)}
                       onBlur={() => setActiveCellInfo(null)}
-                      onChange={(e) => handleCumulativeActualChange(idx, parseFloat(e.target.value) || 0)}
+                      onChange={(val) => handleCumulativeActualChange(idx, val ?? 0)}
                       className="w-full text-center font-bold font-mono rounded px-1.5 py-1 border transition-colors bg-white text-orange-850 border-orange-200 hover:border-orange-300 focus:outline-hidden focus:ring-1 focus:ring-blue-500 shadow-3xs"
                     />
                   </td>
@@ -364,13 +361,12 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
               </td>
               {project.monthlyData.map((m, idx) => (
                 <td key={`cash-plan-${idx}`} className="p-2 border-r border-slate-200 bg-blue-50/5">
-                  <input
-                    type="number"
+                  <SafeNumberInput
                     step="5"
                     value={m.targetCashFlow}
                     onFocus={() => setActiveCellInfo(`Month ${idx + 1} Planned Cash Drawdown`)}
                     onBlur={() => setActiveCellInfo(null)}
-                    onChange={(e) => handleTargetCashFlowChange(idx, parseInt(e.target.value, 10) || 0)}
+                    onChange={(val) => handleTargetCashFlowChange(idx, val ?? 0)}
                     className="w-full bg-white text-slate-800 border border-slate-200 hover:border-slate-300 focus:outline-hidden focus:ring-1 focus:ring-blue-500 rounded px-1.5 py-1 text-center font-mono font-bold transition-shadow"
                   />
                 </td>
@@ -392,14 +388,13 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
                       isHistorical ? 'bg-orange-50/5' : 'bg-slate-50/5'
                     }`}
                   >
-                    <input
-                      type="number"
+                    <SafeNumberInput
                       step="5"
-                      value={m.actualCashFlow !== null ? m.actualCashFlow : ''}
+                      value={m.actualCashFlow}
                       placeholder="0"
                       onFocus={() => setActiveCellInfo(`Month ${idx + 1} Actual Cash Expenditure`)}
                       onBlur={() => setActiveCellInfo(null)}
-                      onChange={(e) => handleActualCashFlowChange(idx, parseInt(e.target.value, 10) || 0)}
+                      onChange={(val) => handleActualCashFlowChange(idx, val ?? 0)}
                       className="w-full text-center font-mono font-bold rounded px-1.5 py-1 border transition-colors bg-white text-slate-800 border-slate-200 hover:border-slate-300 focus:outline-hidden focus:ring-1 focus:ring-blue-500 shadow-3xs"
                     />
                   </td>
