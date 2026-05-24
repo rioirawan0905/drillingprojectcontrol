@@ -68,14 +68,14 @@ export default function SidebarControls({
     const updatedWBS = currentProject.wbsList.map((item) => {
       if (item.id === id) {
         let parsedVal = value;
-        if (typeof value === 'string') {
+        if (key !== 'name' && typeof value === 'string') {
           const num = parseFloat(value);
           parsedVal = isNaN(num) ? 0 : num;
         }
 
-        // Apply clamping where necessary
+        // Apply clamping where necessary, support decimals
         if (key === 'progress') {
-          parsedVal = Math.min(100, Math.max(0, parsedVal as number));
+          parsedVal = Math.round(Math.max(0, parsedVal as number) * 10) / 10;
         } else if (key === 'budget' || key === 'spent') {
           parsedVal = Math.max(0, parsedVal as number);
         }
@@ -126,8 +126,10 @@ export default function SidebarControls({
         let parsedVal = typeof value === 'string' ? parseFloat(value) : value;
         parsedVal = isNaN(parsedVal) ? 0 : parsedVal;
 
-        if (key === 'targetCumulativeProgress' || key === 'actualCumulativeProgress') {
-          parsedVal = Math.min(100, Math.max(0, parsedVal));
+        if (key === 'targetCumulativeProgress') {
+          parsedVal = Math.min(100, Math.max(0, Math.round(parsedVal * 10) / 10));
+        } else if (key === 'actualCumulativeProgress') {
+          parsedVal = Math.max(0, Math.round(parsedVal * 10) / 10);
         } else if (key === 'targetCashFlow' || key === 'actualCashFlow') {
           parsedVal = Math.max(0, parsedVal);
         }
@@ -319,20 +321,21 @@ export default function SidebarControls({
                   </div>
                 </div>
 
-                <div>
-                  <div className="flex justify-between text-[10px] text-slate-500 mb-0.5">
-                    <span>Physical Progress</span>
-                    <span className="font-bold text-slate-700">{item.progress}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={item.progress}
-                    onChange={(e) => updateWBSItem(item.id, 'progress', parseInt(e.target.value, 10))}
-                    className="w-full accent-blue-600 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer"
-                  />
-                </div>
+                    <div>
+                      <div className="flex justify-between text-[10px] text-slate-500 mb-0.5">
+                        <span>Physical Progress (EV)</span>
+                        <span className="font-bold text-slate-700">{item.progress}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max={item.progress > 100 ? Math.ceil(item.progress) : "100"}
+                        step="0.1"
+                        value={item.progress}
+                        onChange={(e) => updateWBSItem(item.id, 'progress', parseFloat(e.target.value))}
+                        className="w-full accent-blue-600 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
               </div>
             ))}
             
@@ -376,6 +379,7 @@ export default function SidebarControls({
                         <label className="block text-[9px] font-medium text-slate-500 mb-0.5">Target Cum %</label>
                         <input
                           type="number"
+                          step="0.1"
                           value={m.targetCumulativeProgress}
                           onChange={(e) => updateMonthlyCell(m.month, 'targetCumulativeProgress', e.target.value)}
                           className="w-full text-xs bg-white text-slate-800 border border-slate-200 rounded px-1.5 py-0.5 font-mono"
@@ -387,6 +391,7 @@ export default function SidebarControls({
                         </label>
                         <input
                           type="number"
+                          step="0.1"
                           value={m.actualCumulativeProgress ?? ''}
                           placeholder="0"
                           onChange={(e) => updateMonthlyCell(m.month, 'actualCumulativeProgress', e.target.value)}

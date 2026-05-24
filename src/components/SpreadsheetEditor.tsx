@@ -52,8 +52,8 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
     let runningSum = 0;
     for (let i = 0; i < 12; i++) {
       runningSum += currentIncrements[i];
-      // Clamp the cumulative at 100 max
-      const cumulativeVal = Math.min(100, Math.round(runningSum));
+      // Clamp the target cumulative in plan at 100 max, support decimals
+      const cumulativeVal = Math.min(100, Math.round(runningSum * 10) / 10);
       updatedMonthly[i] = {
         ...updatedMonthly[i],
         targetCumulativeProgress: cumulativeVal
@@ -90,7 +90,7 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
         runningSum += (increment ?? 0);
         updatedMonthly[i] = {
           ...updatedMonthly[i],
-          actualCumulativeProgress: Math.min(100, Math.round(runningSum))
+          actualCumulativeProgress: Math.round(runningSum * 10) / 10
         };
       } else {
         updatedMonthly[i] = {
@@ -108,8 +108,8 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
 
   // 3. Handler for Cumulative Plan Progress Change
   const handleCumulativePlanChange = (index: number, val: number) => {
-    // Cumulative should be cumulative, so clamp to 100 max
-    const newVal = Math.min(100, Math.max(0, Math.round(val)));
+    // Cumulative should be cumulative, so clamp to 100 max, support decimals
+    const newVal = Math.min(100, Math.max(0, Math.round(val * 10) / 10));
     const updatedMonthly = [...project.monthlyData];
     updatedMonthly[index] = {
       ...updatedMonthly[index],
@@ -136,7 +136,8 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
 
   // 4. Handler for Cumulative Actual Progress Change
   const handleCumulativeActualChange = (index: number, val: number) => {
-    const newVal = Math.min(100, Math.max(0, Math.round(val)));
+    // Actual progress can exceed 100%
+    const newVal = Math.max(0, Math.round(val * 10) / 10);
     const updatedMonthly = [...project.monthlyData];
     updatedMonthly[index] = {
       ...updatedMonthly[index],
@@ -256,7 +257,7 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
                   <td key={`inc-plan-${idx}`} className="p-2 border-r border-slate-200 bg-blue-50/10">
                     <input
                       type="number"
-                      step="0.5"
+                      step="0.1"
                       min="0"
                       max="100"
                       value={incVal}
@@ -280,6 +281,7 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
                 <td key={`cum-plan-${idx}`} className="p-2 border-r border-slate-200 bg-blue-50/20">
                   <input
                     type="number"
+                    step="0.1"
                     min="0"
                     max="100"
                     value={m.targetCumulativeProgress}
@@ -311,7 +313,7 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
                   >
                     <input
                       type="number"
-                      step="0.5"
+                      step="0.1"
                       value={incActualVal !== null ? incActualVal : ''}
                       placeholder="0"
                       onFocus={() => setActiveCellInfo(`Month ${idx + 1} Incremental Actual Progress`)}
@@ -341,6 +343,7 @@ export default function SpreadsheetEditor({ project, onUpdateProject }: Spreadsh
                   >
                     <input
                       type="number"
+                      step="0.1"
                       value={m.actualCumulativeProgress !== null ? m.actualCumulativeProgress : ''}
                       placeholder="0"
                       onFocus={() => setActiveCellInfo(`Month ${idx + 1} Cumulative Actual Progress`)}

@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ProjectYearData, WBSItem } from '../types';
-import { Sparkles, Terminal, BookOpen, AlertTriangle, Play, HelpCircle, Send, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Sparkles, Terminal, BookOpen, AlertTriangle, Play, HelpCircle, Send, CheckCircle2, RefreshCw, Copy, Check } from 'lucide-react';
 
 interface AICopilotTerminalProps {
   project: ProjectYearData;
@@ -19,13 +19,7 @@ export default function AICopilotTerminal({ project, allProjects }: AICopilotTer
   const [customQuestion, setCustomQuestion] = useState('');
   const [qaPairs, setQaPairs] = useState<Array<{ q: string; a: string }>>([]);
   const [isAnswering, setIsAnswering] = useState(false);
-
-  // Re-run diagnostic audit whenever project data changes to ensure live syncing
-  useEffect(() => {
-    if (showResult) {
-      // Keep result displayed but update values seamlessly
-    }
-  }, [project]);
+  const [copied, setCopied] = useState(false);
 
   // Project control metrics
   const selectedYear = project.year;
@@ -51,7 +45,7 @@ export default function AICopilotTerminal({ project, allProjects }: AICopilotTer
   // Find hidden delays
   const hiddenDelays = project.wbsList.filter(item => item.spent > 0 && item.progress === 0);
 
-  // Calculate Front-Loading Coefficient: Cummulative cash flow spend ratio vs Physical achievement ratio
+  // Calculate Front-Loading Coefficient
   const budgetSpentPercent = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
   const frontLoadingRatio = actualProgressAtCutoff > 0 ? budgetSpentPercent / actualProgressAtCutoff : 1.0;
 
@@ -66,44 +60,31 @@ export default function AICopilotTerminal({ project, allProjects }: AICopilotTer
     setAuditStep(1);
 
     const stepTimers = [
-      setTimeout(() => setAuditStep(2), 500),
-      setTimeout(() => setAuditStep(3), 1100),
-      setTimeout(() => setAuditStep(4), 1800),
+      setTimeout(() => setAuditStep(2), 550),
+      setTimeout(() => setAuditStep(3), 1150),
+      setTimeout(() => setAuditStep(4), 1750),
       setTimeout(() => {
         setIsAuditing(false);
         setShowResult(true);
-      }, 2400)
+      }, 2300)
     ];
 
     return () => stepTimers.forEach(clearTimeout);
   };
 
-  // Pre-bake domain-expert Q&As based on the Algeria MLN Drilling context
+  // Pre-bake response generator
   const getSimulatedAIResponse = (question: string) => {
     const qLower = question.toLowerCase();
     
-    let answer = "";
-    if (qLower.includes('delay') || qLower.includes('delay') || qLower.includes('late') || qLower.includes('behind')) {
-      answer = `Based on our SPI coefficient of **${spi.toFixed(2)}**, the Drilling MLN Phase 5 project is currently tracking **${spi < 1 ? 'behind schedule' : 'ahead/on timeline'}**. 
-      The primary friction stems from ${hiddenDelays.length > 0 ? `unearned progress in cost centers like **${hiddenDelays[0].name}**` : 'mild execution constraints in the active rig operations channel'}. 
-      To recover, we advise applying the active acceleration rate of **${alpha.toFixed(1)}x** to adjust drillstring rotational speeds, optimizing desert rig-move operations between Menzel Ledjmet Nord coordinates, and minimizing tripping cycle frequencies. Expected schedule correction is estimated at **M10-${String(selectedYear).substring(2)}** if guidelines are rigorously enforced.`;
+    if (qLower.includes('delay') || qLower.includes('late') || qLower.includes('behind')) {
+      return `Based on our SPI coefficient of **${spi.toFixed(2)}**, the Drilling MLN Phase 5 project is currently tracking **${spi < 1 ? 'behind schedule' : 'ahead/on timeline'}**. Primary friction stems from ${hiddenDelays.length > 0 ? `unearned progress in cost centers like **${hiddenDelays[0].name}**` : 'mild execution constraints in the active rig operations channel'}. To recover, we advise applying the active acceleration rate of **${alpha.toFixed(1)}x** to adjust drillstring rotational speeds, optimizing desert rig-move operations between Menzel Ledjmet Nord coordinates, and minimizing tripping frequencies. Schedule correction is targeted at **M10-${String(selectedYear).substring(2)}**.`;
     } else if (qLower.includes('overrun') || qLower.includes('cost') || qLower.includes('spent') || qLower.includes('money') || qLower.includes('budget')) {
-      answer = `The aggregate spending ratio shows **$${totalSpent.toLocaleString()}k** disbursed against an approved **$${totalBudget.toLocaleString()}k** authorized baseline (${budgetSpentPercent.toFixed(1)}% burned). 
-      ${overruns.length > 0 
-        ? `We have flagged cost overruns in **${overruns.map(o => o.name).join(', ')}**. For instance, **${overruns[0].name}** has exceeded its budget ceiling by **$${(overruns[0].spent - overruns[0].budget).toLocaleString()}k**.`
-        : 'Currently, no singular cost center has breached its approved budget ceiling, which indicates disciplined field expenditure routing.'} 
-      The resulting project-wide Cost Performance Index (CPI) stands at a solid **${cpi.toFixed(2)}**. However, with a Front-Loading Risk index of **${frontLoadingRatio.toFixed(1)}x**, capital is moving faster than physical mechanical progress. We recommend capping mobilization drawdowns until rig-up verification is fully signed off by desert site auditors.`;
+      return `The aggregate spending ratio shows **$${totalSpent.toLocaleString()}k** disbursed against an approved **$${totalBudget.toLocaleString()}k** authorized baseline (${budgetSpentPercent.toFixed(1)}% burned). ${overruns.length > 0 ? `We have flagged cost overruns in **${overruns.map(o => o.name).join(', ')}**. For instance, **${overruns[0].name}** has exceeded its budget ceiling by **$${(overruns[0].spent - overruns[0].budget).toLocaleString()}k**.` : 'Currently, no singular cost center has breached its approved budget ceiling, which indicates disciplined field expenditure routing.'} The resulting project-wide Cost Performance Index (CPI) stands at a solid **${cpi.toFixed(2)}**. However, with a Front-Loading Risk index of **${frontLoadingRatio.toFixed(1)}x**, capital is moving faster than physical mechanical progress. We recommend capping mobilization drawdowns until rig-up verification is fully signed off.`;
     } else if (qLower.includes('sahara') || qLower.includes('algeria') || qLower.includes('field') || qLower.includes('mln')) {
-      answer = `The **Menzel Ledjmet Nord (MLN)** campaign is characterized by tight Saharan well spacing, deep high-pressure carbonaceous zones, and complex logistical supply chains from Hassi Messaoud. 
-      Mud logging reports indicate that heavy mud-weights (clamped at 1.45–1.62 SG with barite additions) are vital during drilling of the active reservoir phases to counteract deep gas influx. 
-      We recommend establishing key sand-filter mitigation parameters on all shale shakers, especially during desert windstorms (sirocco seasons), to avoid physical equipment deterioration.`;
+      return `The **Menzel Ledjmet Nord (MLN)** campaign is characterized by tight Saharan well spacing, deep high-pressure carbonaceous zones, and complex logistical supply chains from Hassi Messaoud. Mud logging reports indicate that heavy mud-weights (clamped at 1.45–1.62 SG with barite additions) are vital during drilling of the active reservoir phases to counteract deep gas influx. We recommend establishing key sand-filter mitigation parameters on all shale shakers, especially during desert windstorms (sirocco seasons), to avoid physical equipment deterioration.`;
     } else {
-      answer = `Diagnostic audit completed for your custom query concerning "${question}". Our MLN Controls Engine has cross-referenced your input with the 12-month spreadsheet ledger. 
-      **Current Year KPI Overlay**: Approved Budget: **$${totalBudget.toLocaleString()}k** | Current SPI: **${spi.toFixed(2)}** | Earned CPI: **${cpi.toFixed(2)}** | Wellbore Confidence: **${confidencePercent}%**. 
-      To maximize efficiency, we recommend maintaining physical milestones ahead of cash outlays and auditing field contractor work orders weekly.`;
+      return `Diagnostic audit completed for your custom query concerning "${question}". Our MLN Controls Engine has cross-referenced your input with the 12-month spreadsheet ledger.\n\n**Current Year KPI Overlay**: Approved Budget: **$${totalBudget.toLocaleString()}k** | Current SPI: **${spi.toFixed(2)}** | Earned CPI: **${cpi.toFixed(2)}** | Wellbore Confidence: **${confidencePercent}%**.\n\nTo maximize efficiency, we recommend maintaining physical milestones ahead of cash outlays and auditing field contractor work orders weekly.`;
     }
-
-    return answer;
   };
 
   const handleAskQuestion = (e: React.FormEvent) => {
@@ -119,284 +100,363 @@ export default function AICopilotTerminal({ project, allProjects }: AICopilotTer
       setQaPairs(prev => [...prev, { q: userQ, a: gResult }]);
       setIsAnswering(false);
       
-      // Auto scroll down inside QA box
       const debugBox = document.getElementById('ai-qa-ledger');
       if (debugBox) {
         setTimeout(() => {
           debugBox.scrollTop = debugBox.scrollHeight;
         }, 100);
       }
-    }, 800);
+    }, 850);
+  };
+
+  // Function to copy report contents
+  const handleCopyReport = () => {
+    const reportText = `DRILLCONTROL™ AI CONTROL WELLBORE AUDIT REPORT (${selectedYear})
+============================================================
+Campaign: ${project.name}
+Reporting Month: Month ${C}
+Wellbore Confidence Score: ${confidencePercent}%
+Schedule Performance Index (SPI): ${spi.toFixed(2)} (${spi >= 1.0 ? 'On/Ahead of Schedule' : 'Behind Schedule'})
+Cost Performance Index (CPI): ${cpi.toFixed(2)} (${cpi >= 1.0 ? 'Within Budget' : 'Overrun Risk'})
+Front-Loading Ratio: ${frontLoadingRatio.toFixed(2)}x
+
+FINANCIAL & PHYSICAL HEALTH BRIEF:
+- Baseline Approved Capital: $${totalBudget.toLocaleString()}k
+- Verified Accrued Spend (AC): $${totalSpent.toLocaleString()}k (${budgetSpentPercent.toFixed(1)}% consumed)
+- Earned Value (EV) Physical Worth: $${Math.round(totalEarnedValue).toLocaleString()}k
+${overruns.length > 0 ? `- EXPENDITURE CRITICAL OVERRUNS: ${overruns.length} cost centers flagged (${overruns.map(o => o.name).join(', ')})` : '- EXPENDITURE STATUS: No individual cost center limits breached.'}
+${hiddenDelays.length > 0 ? `- MILESTONES CAUTION: ${hiddenDelays.length} centers have accrued spent cash but 0% progress (${hiddenDelays.map(h => h.name).join(', ')})` : '- MILESTONES STATUS: No zero-earned progress outliers.'}
+
+AI RECOMMENDED DECISIONS CHECKLIST:
+1. Target remaining rigging activities on lazy or zero-earned items like "${hiddenDelays.length > 0 ? hiddenDelays[0].name : 'undeclared cost centers'}" first.
+2. Maintain mud logging specific gravity (SG) at 1.45–1.62 range under active recovery rate ${alpha.toFixed(1)}x to avoid deep gas influx delays in the Saharan reservoir.
+3. Tighten monthly audit cycles to correct the active ${frontLoadingRatio.toFixed(1)}x Front-Loading drawdowns.
+
+Generated via DrillControl™ AI Systems on ${new Date().toISOString().split('T')[0]}`;
+
+    // Robust copying support
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(reportText)
+        .then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        })
+        .catch(() => {
+          fallbackCopyText(reportText);
+        });
+    } else {
+      fallbackCopyText(reportText);
+    }
+  };
+
+  const fallbackCopyText = (text: string) => {
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Fallback copy failed", err);
+    }
   };
 
   return (
-    <div id="ai-controls-advisory-panel" className="bg-slate-900 border border-slate-800 rounded-2xl shadow-lg overflow-hidden font-sans">
+    <div id="ai-controls-advisory-panel" className="bg-slate-950 border border-slate-800 rounded-2xl shadow-xl overflow-hidden font-sans">
       
-      {/* HUD Panel Header */}
-      <div className="p-5 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 bg-blue-500/10 text-blue-400 rounded-xl relative border border-blue-500/20">
-            <Sparkles className="w-5 h-5 animate-pulse" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full" />
+      {/* Dynamic Header Block with neat Status Indicator */}
+      <div className="p-5 border-b border-slate-800/80 bg-slate-950 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-500/10 text-blue-400 rounded-xl border border-blue-500/20 shadow-inner">
+            <Sparkles className="w-5 h-5 text-blue-400" />
           </div>
           <div>
             <h3 className="text-sm font-black text-slate-100 uppercase tracking-widest flex items-center gap-2">
               DrillControl™ MLN AI Advisory Copilot
             </h3>
-            <p className="text-[11px] text-slate-400 font-medium">
-              On-demand project controls audit. Powered by algorithmic CPI/SPI modeling for onshore deep Saharan wellbores.
+            <p className="text-[11px] text-slate-400 font-medium leading-tight">
+              S-Curve analytical diagnostic model optimized for deep Saharan onshore campaigns.
             </p>
           </div>
         </div>
 
-        <span className="hidden md:flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold font-mono text-emerald-400 bg-emerald-500/10 rounded-full border border-emerald-500/20">
-          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-          AI ENGINE ONLINE
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 text-[9px] font-mono font-bold leading-none uppercase text-emerald-400 bg-emerald-500/10 rounded-full border border-emerald-500/20 self-start sm:self-auto">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+          AI Core Online
         </span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-slate-800">
+      {/* Spacious Sequential Stack Layout — Replaces the tight, crowded side-by-side split grid on desktop */}
+      <div className="p-5 space-y-5">
         
-        {/* Left Side: Performance Metrics HUD panel & Action Button (col-span-4) */}
-        <div className="lg:col-span-5 p-5 space-y-4 bg-slate-950/30">
-          
-          <div className="space-y-2.5">
+        {/* SECTION 1: Diagnostic Metrics row */}
+        <div className="p-4 bg-slate-900 border border-slate-850 rounded-xl space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-mono">
-              Live Algorithmic Indices
+              Live Algorithmic Performance Coefficients
             </h4>
-            
-            <div className="grid grid-cols-2 gap-2">
-              {/* SPI Widget */}
-              <div className="bg-slate-950/50 p-3 rounded-xl border border-slate-800/60 text-center">
-                <span className="block text-[9px] text-slate-500 uppercase tracking-wider font-mono">Schedule SPI</span>
-                <span className={`text-xl font-mono font-black ${
-                  spi >= 1.0 ? 'text-emerald-400' : 'text-rose-400'
-                }`}>
-                  {spi.toFixed(2)}
-                </span>
-                <span className="block text-[8px] text-slate-400 font-medium mt-0.5">
-                  {spi >= 1.0 ? '✓ On Schedule' : '⚠ Critical Lag'}
-                </span>
-              </div>
-
-              {/* CPI Widget */}
-              <div className="bg-slate-950/50 p-3 rounded-xl border border-slate-800/60 text-center">
-                <span className="block text-[9px] text-slate-500 uppercase tracking-wider font-mono">Cost CPI</span>
-                <span className={`text-xl font-mono font-black ${
-                  cpi >= 1.0 ? 'text-emerald-400' : 'text-rose-400'
-                }`}>
-                  {cpi.toFixed(2)}
-                </span>
-                <span className="block text-[8px] text-slate-400 font-medium mt-0.5">
-                  {cpi >= 1.0 ? '✓ Within Budget' : '⚠ Overrun Risk'}
-                </span>
-              </div>
-            </div>
-
-            {/* Comprehensive Risk Indexes */}
-            <div className="bg-slate-950/50 p-3.5 rounded-xl border border-slate-800/60 space-y-2 text-xs">
-              <div className="flex justify-between items-center text-[10px] font-mono text-slate-400 pb-1.5 border-b border-slate-800">
-                <span>KPI ADVISORY FLAGS</span>
-                <span className="text-slate-500">M1-M12 Chronology</span>
-              </div>
-              
-              <div className="flex justify-between text-[11px]">
-                <span className="text-slate-400 font-medium">Front-Loading Index:</span>
-                <span className={`font-mono font-bold ${
-                  frontLoadingRatio > 1.3 ? 'text-amber-400' : 'text-slate-300'
-                }`}>
-                  {frontLoadingRatio.toFixed(1)}x
-                </span>
-              </div>
-
-              <div className="flex justify-between text-[11px]">
-                <span className="text-slate-400 font-medium">Overrun Cost-Centers:</span>
-                <span className={`font-mono font-bold ${
-                  overruns.length > 0 ? 'text-rose-400' : 'text-emerald-400'
-                }`}>
-                  {overruns.length} units
-                </span>
-              </div>
-
-              <div className="flex justify-between text-[11px]">
-                <span className="text-slate-400 font-medium">Hidden Milestones Lag:</span>
-                <span className={`font-mono font-bold ${
-                  hiddenDelays.length > 0 ? 'text-rose-500 underline decoration-dotted animate-pulse' : 'text-emerald-400'
-                }`}>
-                  {hiddenDelays.length} flagged
-                </span>
-              </div>
-
-              <div className="pt-2 border-t border-slate-800">
-                <div className="flex justify-between text-[10px] mb-1 font-bold">
-                  <span className="text-slate-400 uppercase tracking-tight">Wellbore Execution Confidence:</span>
-                  <span className="font-mono text-blue-400 font-black">{confidencePercent}%</span>
-                </div>
-                <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      confidencePercent >= 80 ? 'bg-emerald-500' : confidencePercent >= 50 ? 'bg-amber-500' : 'bg-rose-500'
-                    }`}
-                    style={{ width: `${confidencePercent}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
+            <span className="text-[9px] font-mono text-slate-500">Menzel Ledjmet Nord Baseline</span>
           </div>
 
-          {/* Action Trigger Audit execution button */}
-          <button
-            onClick={handleStartAudit}
-            disabled={isAuditing}
-            className="w-full py-3 px-4 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white disabled:bg-slate-800 disabled:text-slate-500 focus:ring-1 focus:ring-blue-500"
-          >
-            {isAuditing ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>Running Algorithmic Audit...</span>
-              </>
-            ) : (
-              <>
-                <Play className="w-4 h-4 text-emerald-400 fill-emerald-400" />
-                <span>Execute AI Controls & Wellbore Audit</span>
-              </>
-            )}
-          </button>
-
-          {/* Simulated Live Terminal Logs for Authenticity */}
-          {isAuditing && (
-            <div className="p-3 bg-black rounded-lg border border-slate-800 text-[10px] font-mono text-slate-300 space-y-1 select-none leading-relaxed">
-              <div className="flex items-center gap-1.5 text-blue-400">
-                <Terminal className="w-3.5 h-3.5" />
-                <span>[LOG] INITIATING MLN WELLBORE DIAGNOSTIC</span>
-              </div>
-              {auditStep >= 1 && <p className="animate-fade-in text-slate-500">▶ Fetching active cost data for Year {selectedYear} campaign...</p>}
-              {auditStep >= 2 && <p className="animate-fade-in text-blue-400">▶ Processing WBS matrix structure and calculating SPI/CPI differentials...</p>}
-              {auditStep >= 3 && <p className="animate-fade-in text-amber-400">▶ Scanning deep Saharan geological variables and drilling acceleration filters...</p>}
-              {auditStep >= 4 && <p className="animate-fade-in text-emerald-400">▶ Finalizing comprehensive executive Advisory report... Done.</p>}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* SPI Indicator Card */}
+            <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-800 text-center flex flex-col justify-center">
+              <span className="text-[9px] text-slate-500 uppercase font-bold font-mono tracking-wider">Schedule Velocity (SPI)</span>
+              <span className={`text-xl font-mono font-black mt-1 ${spi >= 1.0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                {spi.toFixed(2)}
+              </span>
+              <span className="text-[8px] text-slate-400 font-medium mt-0.5">
+                {spi >= 1.0 ? '✓ Progressive Pace' : '⚠ Delay Deviation'}
+              </span>
             </div>
-          )}
 
+            {/* CPI Indicator Card */}
+            <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-800 text-center flex flex-col justify-center">
+              <span className="text-[9px] text-slate-500 uppercase font-bold font-mono tracking-wider">Cost Efficiency (CPI)</span>
+              <span className={`text-xl font-mono font-black mt-1 ${cpi >= 1.0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                {cpi.toFixed(2)}
+              </span>
+              <span className="text-[8px] text-slate-400 font-medium mt-0.5">
+                {cpi >= 1.0 ? '✓ Cost Optimized' : '⚠ Capital Leakage'}
+              </span>
+            </div>
+
+            {/* Confidence Slider Card */}
+            <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-800 text-left flex flex-col justify-center">
+              <div className="flex justify-between text-[9px] text-slate-500 uppercase font-bold font-mono tracking-wider">
+                <span>Wellbore Confidence</span>
+                <span className="text-blue-400 font-extrabold">{confidencePercent}%</span>
+              </div>
+              <div className="w-full bg-slate-850 h-1.5 rounded-full overflow-hidden mt-2">
+                <div 
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    confidencePercent >= 80 ? 'bg-emerald-500' : confidencePercent >= 50 ? 'bg-amber-500' : 'bg-rose-500'
+                  }`}
+                  style={{ width: `${confidencePercent}%` }}
+                />
+              </div>
+              <span className="text-[8px] text-slate-400 font-medium mt-1 font-sans text-center">
+                Refined by actuals & hidden delays
+              </span>
+            </div>
+          </div>
+
+          {/* Inline Advisory Flags Summary Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-slate-800/60 text-[10.5px]">
+            <div className="flex items-center justify-between px-2 py-1 bg-slate-950/40 rounded border border-slate-800/40">
+              <span className="text-slate-500">Front-Loading Index:</span>
+              <span className={`font-mono font-bold ${frontLoadingRatio > 1.3 ? 'text-amber-400' : 'text-slate-300'}`}>
+                {frontLoadingRatio.toFixed(2)}x
+              </span>
+            </div>
+            <div className="flex items-center justify-between px-2 py-1 bg-slate-950/40 rounded border border-slate-800/40">
+              <span className="text-slate-500">Overrun Cost Centers:</span>
+              <span className={`font-mono font-bold ${overruns.length > 0 ? 'text-rose-400 font-black' : 'text-slate-300'}`}>
+                {overruns.length} units
+              </span>
+            </div>
+            <div className="flex items-center justify-between px-2 py-1 bg-slate-950/40 rounded border border-slate-800/40">
+              <span className="text-slate-500">Unearned Progress (Capital lockup):</span>
+              <span className={`font-mono font-bold ${hiddenDelays.length > 0 ? 'text-amber-400 font-black' : 'text-slate-300'}`}>
+                {hiddenDelays.length} centers
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Right Side: Active Advisory Output or Interactive Search Terminal (col-span-7) */}
-        <div className="lg:col-span-7 p-5 flex flex-col justify-between space-y-4">
+        {/* SECTION 2: Main Executive AI Report Area */}
+        <div className="relative bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-col min-h-[190px]">
           
-          {/* Active Audit Report or Welcome Panel */}
-          <div className="flex-1 min-h-[180px] text-xs leading-relaxed text-slate-300">
+          {/* Header of Report Box with Copy Controls */}
+          <div className="flex items-center justify-between px-4 py-3 bg-slate-950/90 border-b border-slate-800/80">
+            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest font-mono flex items-center gap-1.5">
+              <Terminal className="w-3.5 h-3.5 text-blue-400" />
+              Controls Audit Report Output
+            </span>
+
+            {showResult && !isAuditing && (
+              <button
+                onClick={handleCopyReport}
+                className={`py-1 px-3 text-[10px] font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                  copied 
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' 
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/60 hover:text-white'
+                }`}
+                title="Copy full executive statement to your clipboard"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3 h-3 text-emerald-400" />
+                    <span>Report Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3 text-slate-400" />
+                    <span>Copy Full AI Report</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+
+          <div className="p-4 flex-1 text-slate-300 text-xs leading-relaxed">
             {!showResult && !isAuditing && (
-              <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3">
-                <div className="p-3 rounded-full bg-slate-800 border border-slate-700/60 text-slate-500">
-                  <BookOpen className="w-6 h-6" />
+              <div className="py-6 flex flex-col items-center justify-center text-center space-y-3.5">
+                <div className="p-3 rounded-full bg-slate-950 border border-slate-850 text-slate-500">
+                  <BookOpen className="w-6 h-6 text-slate-500/80" />
                 </div>
-                <div>
-                  <h5 className="font-bold text-slate-200">System Standing By</h5>
-                  <p className="text-[11px] text-slate-500 max-w-xs mx-auto mt-1">
-                    Click "Execute AI Controls & Wellbore Audit" to review immediate forecasting summaries, front-loading risk checks, and mitigation briefs.
+                <div className="max-w-md">
+                  <h5 className="font-bold text-slate-200">Advisory Engine Idle</h5>
+                  <p className="text-[11px] text-slate-500 mt-1 mb-4 leading-normal">
+                    Execute the controls audit to inspect deep-well mathematical variances, desert logistical forecasting, mud logging requirements, and contract performance trends.
                   </p>
+                  <button
+                    onClick={handleStartAudit}
+                    className="mx-auto py-2 px-5 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-md active:scale-95"
+                  >
+                    <Play className="w-3.5 h-3.5 text-emerald-300 fill-emerald-300" />
+                    <span>Execute AI Controls & Wellbore Audit</span>
+                  </button>
                 </div>
               </div>
             )}
 
             {isAuditing && (
-              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-500 animate-pulse text-[11px] font-mono">
-                <Sparkles className="w-8 h-8 text-blue-500 animate-bounce mb-2" />
-                <span>Ingestively compiling Saharan well logs and financial spreadsheets...</span>
+              <div className="py-8 flex flex-col items-center justify-center text-center space-y-3.5">
+                <RefreshCw className="w-7 h-7 text-blue-500 animate-spin" />
+                <div className="font-mono text-[10px] text-slate-500 space-y-1 max-w-sm">
+                  <p className="text-blue-400 font-bold">[LOG] COMPILING GEOLOGICAL AND LEDGER REGRESSIONS...</p>
+                  {auditStep >= 1 && <p className="animate-fade-in text-slate-400">▶ Loaded monthly S-curve points for M1-M12 on Year {selectedYear}</p>}
+                  {auditStep >= 2 && <p className="animate-fade-in text-slate-400">▶ Solved differential equations for active front-loading ratios</p>}
+                  {auditStep >= 3 && <p className="animate-fade-in text-amber-400">▶ Evaluated unearned capital blockages in critical drilling zones</p>}
+                </div>
               </div>
             )}
 
             {showResult && !isAuditing && (
-              <div className="space-y-4 animate-fade-in custom-scrollbar overflow-y-auto max-h-[300px] pr-2">
-                <div className="flex items-center gap-1.5 border-b border-slate-800 pb-2">
-                  <Sparkles className="w-4 h-4 text-emerald-400" />
-                  <span className="font-mono font-black text-slate-200 text-[11px] uppercase tracking-wider">
-                    Wellbore Controls Summary ({selectedYear} Campaign)
-                  </span>
+              <div className="space-y-4 animate-fade-in text-xs max-h-[350px] overflow-y-auto pr-1 select-text">
+                <p className="text-slate-300">
+                  We have concluded the project controls assessment for the <strong className="text-blue-400 font-black">{project.name}</strong> campaign. The active data highlights a 
+                  <span className={`font-semibold ${spi < 1 ? ' text-rose-300' : ' text-emerald-300'}`}>
+                    {spi < 1 ? ' schedule latency' : ' fast-track operational schedule status'}
+                  </span> with an index of <span className="font-mono font-bold">{spi.toFixed(2)}</span>.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/50 p-3 rounded-lg border border-slate-850">
+                  <div className="space-y-1">
+                    <span className="block text-[9px] uppercase font-bold text-slate-500 font-mono">Cost Ledger Status</span>
+                    <p className="text-[11px]">
+                      Disbursed cap: <span className="font-mono font-bold text-slate-200">${totalSpent.toLocaleString()}k</span> vs limit <span className="font-mono text-slate-200">${totalBudget.toLocaleString()}k</span>. Cost Performance Index (CPI) stands at <strong className="text-slate-200">{cpi.toFixed(2)}</strong>.
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="block text-[9px] uppercase font-bold text-slate-500 font-mono">Geotechnical Condition</span>
+                    <p className="text-[11px]">
+                      Menzel Ledjmet Nord requires mud density between <span className="font-mono text-slate-200 text-semibold">1.45-1.62 SG</span> to resist pressure zones. Under the active <span className="font-mono font-bold text-emerald-400">{alpha.toFixed(1)}x</span> recovery rate, casing cycle speeds must be protected.
+                    </p>
+                  </div>
                 </div>
 
-                <div className="space-y-3 text-[11.5px] text-slate-300">
-                  <p>
-                    Algorithmic regression is complete for the <span className="text-blue-400 text-semibold">{project.name}</span> campaign. The current performance represents a 
-                    <strong> {spi < 1 ? 'critical schedule divergence' : 'fully compliant schedule velocity'}</strong> with an SPI of <strong>{spi.toFixed(2)}</strong>.
-                  </p>
-
-                  <ul className="list-disc pl-4 space-y-1.5 text-slate-400">
-                    <li>
-                      <strong className="text-slate-200">Financial Disbursement Index</strong>: Total spent is <span className="font-mono text-slate-200 font-bold">${totalSpent.toLocaleString()}k</span> against an approved authority limit of <span className="font-mono text-slate-100">${totalBudget.toLocaleString()}k</span>. Cost Performance Index (CPI) stands at <span className="text-blue-400 font-mono font-bold">{cpi.toFixed(2)}</span>.
-                    </li>
-                    {overruns.length > 0 && (
+                <div className="space-y-1.5 text-slate-400">
+                  <span className="block text-[9px] uppercase font-bold text-slate-500 font-mono">Flagged Work Center Anomalies</span>
+                  <ul className="list-disc pl-4 space-y-1 text-[11px]">
+                    {overruns.length > 0 ? (
                       <li className="text-rose-300">
-                        <strong className="text-rose-200">Breached Cost Ceilings</strong>: Cost center <span className="font-bold underline decoration-dotted">{overruns[0].name}</span> has exceeded budget limits by <span className="font-mono font-black">${(overruns[0].spent - overruns[0].budget).toLocaleString()}k</span>. Capital flow must be throttled under administrative review.
+                        <strong>Budget Breach</strong>: Cost center <span className="text-rose-200 underline decoration-dotted">{overruns[0].name}</span> is overspent by <span className="font-mono text-rose-250 font-black">${(overruns[0].spent - overruns[0].budget).toLocaleString()}k</span>.
                       </li>
+                    ) : (
+                      <li className="text-emerald-400/90 font-medium">No active individual work-center budget breaches recorded.</li>
                     )}
-                    {hiddenDelays.length > 0 && (
+                    {hiddenDelays.length > 0 ? (
                       <li className="text-amber-300/90">
-                        <strong className="text-amber-200">Physical Capital Lockup</strong>: We identified unearned progress in <span className="font-bold text-amber-200">{hiddenDelays[0].name}</span> where cash is disbursed but physical completion metrics remain at <span className="font-mono">0%</span>. Risk index indicates hidden contract delays.
+                        <strong>Milestone Stagnation</strong>: Spent cash detected on <span className="text-amber-200 font-bold">{hiddenDelays[0].name}</span> while verified progress is <span className="font-mono">0%</span>.
                       </li>
+                    ) : (
+                      <li className="text-emerald-400/90 font-medium">No zero-progress payment anomalies flagged.</li>
                     )}
-                    <li>
-                      <strong className="text-slate-200">Algerian Sahara Engineering parameters</strong>: Geological formations in Menzel Ledjmet Nord require a mud specific gravity (SG) range of <span className="font-mono text-slate-200">1.45–1.58</span>. Under active mud logging velocity adjustments of <span className="font-mono text-emerald-400 font-bold">{alpha.toFixed(1)}x</span>, casing procedures must be accelerated to prevent sand influx delays.
-                    </li>
                   </ul>
+                </div>
 
-                  <div className="p-2.5 bg-slate-950/40 rounded-lg border border-slate-800 text-[10px] text-slate-400 leading-relaxed font-mono">
-                    <span className="font-bold uppercase text-blue-400 tracking-wider block mb-0.5">Recommendations Checklist</span>
-                    1. Direct remaining rigging activities to cover {hiddenDelays.length > 0 ? hiddenDelays[0].name : 'undeclared cost centers'} initially.<br />
-                    2. Maintain Saharan mud-weights above 1.50 SG during drilling of deep high-pressure casing blocks.<br />
-                    3. Cap non-rig operations spend limits to lower the active {frontLoadingRatio.toFixed(1)}x Front-Loading outlier.
-                  </div>
+                <div className="p-3 bg-slate-950 text-[10.5px] rounded-lg border border-slate-850 text-slate-350 space-y-1 font-mono leading-relaxed">
+                  <span className="font-bold text-blue-400 uppercase text-[9px] block">AI RECOMMENDED DECISIONS CHECKLIST</span>
+                  <div>• Redirect drill rig crews to lazy milestone blocks like {hiddenDelays.length > 0 ? `"${hiddenDelays[0].name}"` : 'undeclared work centers'} immediately.</div>
+                  <div>• Add barite blocks to maintain drilling mud specific gravity high to control carbonaceous reservoir pressure.</div>
+                  <div>• Tighten drawdowns to suppress the active high {frontLoadingRatio.toFixed(2)}x Front-Loading multiplier.</div>
+                </div>
+
+                <div className="flex justify-between items-center bg-slate-950 px-3 py-1 text-[9px] text-slate-500 rounded font-mono">
+                  <span>Audit Code: MLN-DIAG-001-COMPLIANT</span>
+                  <span>Engine: Controls-v5.3</span>
                 </div>
               </div>
             )}
           </div>
+        </div>
 
-          {/* Interactive Custom Q&A search Terminal */}
-          <div className="border-t border-slate-800 pt-4 space-y-3">
-            
-            {/* Historical Dialog Screen (shows up if Qs have been asked) */}
+        {/* SECTION 3: Bottom Custom Q&A Terminal */}
+        <div className="border-t border-slate-800/80 pt-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">
+              On-Demand Query Dialog Terminal
+            </h5>
             {qaPairs.length > 0 && (
-              <div id="ai-qa-ledger" className="max-h-[140px] overflow-y-auto space-y-2.5 pb-2 border-b border-slate-800/50 pr-1 custom-scrollbar">
-                {qaPairs.map((pair, idx) => (
-                  <div key={idx} className="space-y-1.5 text-[11px]">
-                    <div className="flex items-center gap-1.5 text-blue-400 font-bold">
-                      <span className="text-[9px] bg-blue-900/40 text-blue-300 px-1 rounded-sm">USER</span>
-                      <span>{pair.q}</span>
-                    </div>
-                    <div className="text-slate-350 bg-slate-950/40 p-2 rounded-lg border border-slate-850">
-                      <span>{pair.a}</span>
-                    </div>
-                  </div>
-                ))}
-                
-                {isAnswering && (
-                  <div className="text-[10px] text-slate-500 flex items-center gap-1.5 font-mono animate-pulse">
-                    <RefreshCw className="w-3 h-3 animate-spin text-slate-400" />
-                    <span>Controls AI is digesting spreadsheet matrix parameters...</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Q&A Input line box */}
-            <form onSubmit={handleAskQuestion} className="flex gap-2">
-              <input
-                type="text"
-                value={customQuestion}
-                onChange={(e) => setCustomQuestion(e.target.value)}
-                placeholder="Ask Controls AI (e.g., 'What is causing my overrun?' or 'Algerian Saharan mud-weights?')"
-                className="flex-1 bg-slate-950 rounded-lg px-3 py-2 text-xs border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-              />
-              <button
-                type="submit"
-                disabled={isAnswering || !customQuestion.trim()}
-                className="px-3.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-800 text-white rounded-lg flex items-center justify-center transition-all cursor-pointer"
+              <button 
+                onClick={() => setQaPairs([])}
+                className="text-[9px] text-slate-500 hover:text-slate-300 font-mono transition-colors"
               >
-                <Send className="w-3.5 h-3.5" />
+                Clear History
               </button>
-            </form>
+            )}
           </div>
 
+          {/* Historical Dialog Box */}
+          {qaPairs.length > 0 && (
+            <div id="ai-qa-ledger" className="max-h-[160px] overflow-y-auto space-y-3 pb-2 border-b border-slate-800/50 pr-1 custom-scrollbar">
+              {qaPairs.map((pair, idx) => (
+                <div key={idx} className="space-y-1 text-xs">
+                  <div className="flex items-center gap-1.5 text-blue-400 font-bold font-mono">
+                    <span className="text-[8px] bg-blue-950 text-blue-300 px-1 py-0.5 rounded font-mono border border-blue-500/20">USER</span>
+                    <span className="truncate max-w-xs sm:max-w-md">{pair.q}</span>
+                  </div>
+                  <div className="text-slate-300 bg-slate-900 border border-slate-850 p-2.5 rounded-lg leading-relaxed text-[11px]">
+                    <p>{pair.a}</p>
+                  </div>
+                </div>
+              ))}
+              
+              {isAnswering && (
+                <div className="text-[10px] text-slate-500 flex items-center gap-1.5 font-mono animate-pulse bg-slate-900/40 p-2 rounded">
+                  <RefreshCw className="w-3 h-3 animate-spin text-slate-400" />
+                  <span>Processing neural audit equations...</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Custom Ask Q Input Form */}
+          <form onSubmit={handleAskQuestion} className="flex gap-2">
+            <input
+              type="text"
+              value={customQuestion}
+              onChange={(e) => setCustomQuestion(e.target.value)}
+              placeholder="Query of anomalies (e.g. 'spent', 'behind', 'sahara')"
+              className="flex-1 bg-slate-950 font-mono text-xs rounded-lg px-3 py-2 border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+            />
+            <button
+              type="submit"
+              disabled={isAnswering || !customQuestion.trim()}
+              className="px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-800 text-white rounded-lg flex items-center justify-center transition-all cursor-pointer shadow-md active:scale-95"
+              title="Submit custom query to copilot"
+            >
+              <Send className="w-3.5 h-3.5" />
+            </button>
+          </form>
         </div>
 
       </div>

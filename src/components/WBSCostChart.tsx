@@ -177,7 +177,7 @@ export default function WBSCostChart({ wbsList, onNavigateToAbbr }: WBSCostChart
                   title="Click to view Earned Value (EV) physical progress definitions"
                   className="flex items-center gap-3 pt-0.5 cursor-pointer hover:bg-slate-50/50 p-1 rounded transition-colors group"
                 >
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono w-24 group-hover:text-blue-600">Physical Done</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono w-24 group-hover:text-blue-600">Physical Done (EV)</span>
                   <div className="flex-1 bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200/30">
                     <div
                       className="h-full bg-blue-500 rounded-full transition-all duration-500"
