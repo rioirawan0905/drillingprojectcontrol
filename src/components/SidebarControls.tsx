@@ -152,19 +152,35 @@ export default function SidebarControls({
           <h2 className="text-xs font-bold text-slate-700 uppercase tracking-widest">Project Control Panel</h2>
         </div>
         
-        <label htmlFor="year-select" className="block text-[10px] uppercase font-bold text-slate-400 mb-1 tracking-wider">Select Year & Campaign</label>
-        <select
-          id="year-select"
-          value={currentProject.year}
-          onChange={(e) => onSelectProject(parseInt(e.target.value, 10))}
-          className="w-full text-xs bg-white border border-slate-200 hover:border-slate-300 rounded-lg px-3 py-2 text-slate-750 font-bold focus:ring-1 focus:ring-blue-500 focus:outline-hidden transition-colors cursor-pointer"
-        >
-          {allProjects.map((proj) => (
-            <option key={proj.year} value={proj.year}>
-              {proj.year} — {proj.name}
-            </option>
-          ))}
-        </select>
+        <div className="grid grid-cols-1 gap-3">
+          <div>
+            <label htmlFor="year-select" className="block text-[10px] uppercase font-bold text-slate-400 mb-1 tracking-wider">Select Year & Campaign</label>
+            <select
+              id="year-select"
+              value={currentProject.year}
+              onChange={(e) => onSelectProject(parseInt(e.target.value, 10))}
+              className="w-full text-xs bg-white border border-slate-200 hover:border-slate-300 rounded-lg px-3 py-2 text-slate-750 font-bold focus:ring-1 focus:ring-blue-500 focus:outline-hidden transition-colors cursor-pointer"
+            >
+              {allProjects.map((proj) => (
+                <option key={proj.year} value={proj.year}>
+                  {proj.year} — {proj.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="campaign-title-input" className="block text-[10px] uppercase font-bold text-slate-400 mb-1 tracking-wider">Edit Campaign Title</label>
+            <input
+              id="campaign-title-input"
+              type="text"
+              value={currentProject.name}
+              onChange={(e) => onUpdateProject({ ...currentProject, name: e.target.value })}
+              placeholder="e.g. Phase 5 Infill Campaign"
+              className="w-full text-xs bg-white text-slate-800 border border-slate-200 focus:ring-1 focus:ring-blue-500 focus:outline-hidden rounded-lg px-3 py-2 font-semibold transition-shadow"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Global Project Sim Sliders */}
@@ -367,25 +383,20 @@ export default function SidebarControls({
                       </div>
                       <div>
                         <label className="block text-[9px] font-medium text-slate-500 mb-0.5">
-                          Actual Cum % {isHistorical ? '' : '(Locked)'}
+                          Actual Cum %
                         </label>
                         <input
                           type="number"
-                          disabled={!isHistorical}
                           value={m.actualCumulativeProgress ?? ''}
-                          placeholder="null"
+                          placeholder="0"
                           onChange={(e) => updateMonthlyCell(m.month, 'actualCumulativeProgress', e.target.value)}
-                          className={`w-full text-xs rounded px-1.5 py-0.5 font-mono border ${
-                            isHistorical 
-                              ? 'bg-white border-slate-200 text-slate-800' 
-                              : 'bg-slate-100 border-slate-100 text-slate-400 cursor-not-allowed'
-                          }`}
+                          className="w-full text-xs rounded px-1.5 py-0.5 font-mono border bg-white border-slate-200 text-slate-800"
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                      <div>
+                       <div>
                         <label className="block text-[9px] font-medium text-slate-500 mb-0.5">Target Cash Flow ($k)</label>
                         <input
                           type="number"
@@ -400,15 +411,10 @@ export default function SidebarControls({
                         </label>
                         <input
                           type="number"
-                          disabled={!isHistorical}
                           value={m.actualCashFlow ?? ''}
-                          placeholder="null"
+                          placeholder="0"
                           onChange={(e) => updateMonthlyCell(m.month, 'actualCashFlow', e.target.value)}
-                          className={`w-full text-xs rounded px-1.5 py-0.5 font-mono border ${
-                            isHistorical 
-                              ? 'bg-white border-slate-200 text-slate-800' 
-                              : 'bg-slate-100 border-slate-100 text-slate-400 cursor-not-allowed'
-                          }`}
+                          className="w-full text-xs rounded px-1.5 py-0.5 font-mono border bg-white border-slate-205 text-slate-800"
                         />
                       </div>
                     </div>
