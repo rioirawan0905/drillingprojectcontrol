@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { INITIAL_PROJECTS } from './data';
 import { ProjectYearData } from './types';
 import SidebarControls from './components/SidebarControls';
@@ -17,9 +17,36 @@ import FormulaGlossary from './components/FormulaGlossary';
 import { Compass, CalendarDays, FileSpreadsheet, Download, FileText, RotateCcw } from 'lucide-react';
 
 export default function App() {
-  const [projects, setProjects] = useState<ProjectYearData[]>(INITIAL_PROJECTS);
-  const [selectedYear, setSelectedYear] = useState<number>(2026);
+  const [projects, setProjects] = useState<ProjectYearData[]>(() => {
+    const saved = localStorage.getItem('mln_drilling_projects_sim');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse saved projects data", e);
+      }
+    }
+    return INITIAL_PROJECTS;
+  });
+
+  const [selectedYear, setSelectedYear] = useState<number>(() => {
+    const saved = localStorage.getItem('mln_drilling_selected_year');
+    if (saved) {
+      const parsed = parseInt(saved, 10);
+      if (!isNaN(parsed)) return parsed;
+    }
+    return 2026;
+  });
+
   const [highlightedAbbr, setHighlightedAbbr] = useState<string | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem('mln_drilling_projects_sim', JSON.stringify(projects));
+  }, [projects]);
+
+  useEffect(() => {
+    localStorage.setItem('mln_drilling_selected_year', String(selectedYear));
+  }, [selectedYear]);
 
   const handleNavigateToAbbr = (abbr: string) => {
     setHighlightedAbbr(abbr);
