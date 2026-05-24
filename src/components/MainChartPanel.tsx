@@ -168,15 +168,19 @@ export default function MainChartPanel({ project, allProjects, onUpdateProject }
       recoveryVal = Math.min(100, Math.max(actualAtC, Math.round(calculatedRec)));
     }
 
+    const isPastOrCurrent = m.month <= C;
+    const actualCumulativeProgress = isPastOrCurrent ? m.actualCumulativeProgress : null;
+    const actualCashFlow = isPastOrCurrent ? m.actualCashFlow : null;
+
     return {
       seqIndex: m.month - 1,
       monthNum: m.month,
       label,
       targetCumulativeProgress: m.targetCumulativeProgress,
-      actualCumulativeProgress: m.actualCumulativeProgress,
+      actualCumulativeProgress,
       recoveryCumulativeProgress: recoveryVal,
       targetCashFlow: m.targetCashFlow,
-      actualCashFlow: m.actualCashFlow,
+      actualCashFlow,
       sourceItem: m
     };
   });
@@ -234,12 +238,12 @@ export default function MainChartPanel({ project, allProjects, onUpdateProject }
   // Coordinate Points for Actual S-Curve
   const actualSPoints = activeDataset
     .filter(p => p.actualCumulativeProgress !== null)
-    .map((p, idx) => ({
-      x: getX(idx),
+    .map((p) => ({
+      x: getX(p.seqIndex),
       y: getY_Progress(p.actualCumulativeProgress!),
       val: p.actualCumulativeProgress!,
       label: p.label,
-      idx
+      idx: p.seqIndex
     }));
 
   const actualSPath = actualSPoints.length > 0
