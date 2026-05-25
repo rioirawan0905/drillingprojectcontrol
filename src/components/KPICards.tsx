@@ -4,7 +4,7 @@
  */
 
 import { ProjectYearData } from '../types';
-import { TrendingUp, AlertTriangle, ShieldCheck, DollarSign } from 'lucide-react';
+import { TrendingUp, AlertTriangle, ShieldCheck, DollarSign, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 
 interface KPICardsProps {
   project: ProjectYearData;
@@ -34,6 +34,36 @@ export default function KPICards({ project, onNavigateToAbbr }: KPICardsProps) {
 
   const SPI = PV > 0 ? (EV / PV) : 1;
   const CPI = AC > 0 ? (EV / AC) : 1;
+
+  // Previous Month's Metrics for Trend Calculations
+  let prevSPI = 1;
+  let prevCPI = 1;
+  let spiTrend: 'up' | 'down' | 'flat' = 'flat';
+  let cpiTrend: 'up' | 'down' | 'flat' = 'flat';
+
+  if (C > 1) {
+    const prevMonthData = project.monthlyData.find((m) => m.month === C - 1) || project.monthlyData[C - 2];
+    if (prevMonthData) {
+      const prevTargetProgress = prevMonthData.targetCumulativeProgress;
+      const prevActualProgress = prevMonthData.actualCumulativeProgress ?? 0;
+      
+      const prevPV = Math.round(totalBudget * (prevTargetProgress / 100));
+      const prevEV = Math.round(totalBudget * (prevActualProgress / 100));
+      
+      // Estimate cumulative AC previously by subtracting the current month's actual cash flow
+      const prevAC = Math.max(1, totalSpent - (currentMonthData ? (currentMonthData.actualCashFlow ?? 0) : 0));
+      
+      prevSPI = prevPV > 0 ? (prevEV / prevPV) : 1;
+      prevCPI = prevAC > 0 ? (prevEV / prevAC) : 1;
+
+      // Classify trend directions
+      if (SPI > prevSPI + 0.005) spiTrend = 'up';
+      else if (SPI < prevSPI - 0.005) spiTrend = 'down';
+
+      if (CPI > prevCPI + 0.005) cpiTrend = 'up';
+      else if (CPI < prevCPI - 0.005) cpiTrend = 'down';
+    }
+  }
 
   // 2. Schedule Status Badge Definition
   const scheduleDiff = actualProgress - targetProgress;
@@ -142,23 +172,53 @@ export default function KPICards({ project, onNavigateToAbbr }: KPICardsProps) {
         <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-center text-xs">
           <div 
             onClick={(e) => { e.stopPropagation(); onNavigateToAbbr('cpi'); }}
-            title="Click to view Cost Performance Index (CPI) formula"
-            className="border-r border-slate-100 hover:bg-slate-50 hover:text-blue-600 transition-colors py-0.5 rounded cursor-pointer"
+            title={`Click to view Cost Performance Index (CPI) formula. Trend compared to previous month: ${cpiTrend === 'up' ? 'Improving' : cpiTrend === 'down' ? 'Declining' : 'Stable'}`}
+            className="border-r border-slate-100 hover:bg-slate-50 hover:text-blue-600 transition-colors py-1 px-1 rounded cursor-pointer flex flex-col items-center justify-center animate-none"
           >
-            <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider">CPI Index</span>
-            <span className={`font-bold font-mono text-xs ${CPI >= 1 ? 'text-emerald-600' : 'text-rose-600'}`}>
-              {CPI.toFixed(2)}
-            </span>
+            <span className="block text-[8px] text-slate-400 font-extrabold uppercase tracking-wider">CPI Index</span>
+            <div className="flex items-center gap-1 mt-0.5">
+              <span className={`font-bold font-mono text-xs ${CPI >= 1 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {CPI.toFixed(2)}
+              </span>
+              {cpiTrend === 'up' ? (
+                <span className="inline-flex items-center text-emerald-600 bg-emerald-55 px-1 py-0.5 rounded text-[8px]" title="Improving cost performance vs last month">
+                  <ArrowUpRight className="w-2.5 h-2.5" />
+                </span>
+              ) : cpiTrend === 'down' ? (
+                <span className="inline-flex items-center text-rose-600 bg-rose-55 px-1 py-0.5 rounded text-[8px]" title="Declining cost performance vs last month">
+                  <ArrowDownRight className="w-2.5 h-2.5" />
+                </span>
+              ) : (
+                <span className="inline-flex items-center text-slate-400 bg-slate-50 px-1 py-0.5 rounded text-[8px]" title="No performance change">
+                  <Minus className="w-2 h-2" />
+                </span>
+              )}
+            </div>
           </div>
           <div 
             onClick={(e) => { e.stopPropagation(); onNavigateToAbbr('spi'); }}
-            title="Click to view Schedule Performance Index (SPI) formula"
-            className="hover:bg-slate-50 hover:text-blue-600 transition-colors py-0.5 rounded cursor-pointer"
+            title={`Click to view Schedule Performance Index (SPI) formula. Trend compared to previous month: ${spiTrend === 'up' ? 'Improving' : spiTrend === 'down' ? 'Declining' : 'Stable'}`}
+            className="hover:bg-slate-50 hover:text-blue-600 transition-colors py-1 px-1 rounded cursor-pointer flex flex-col items-center justify-center animate-none"
           >
-            <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider">SPI Index</span>
-            <span className={`font-bold font-mono text-xs ${SPI >= 1 ? 'text-emerald-600' : 'text-rose-600'}`}>
-              {SPI.toFixed(2)}
-            </span>
+            <span className="block text-[8px] text-slate-400 font-extrabold uppercase tracking-wider">SPI Index</span>
+            <div className="flex items-center gap-1 mt-0.5">
+              <span className={`font-bold font-mono text-xs ${SPI >= 1 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {SPI.toFixed(2)}
+              </span>
+              {spiTrend === 'up' ? (
+                <span className="inline-flex items-center text-emerald-600 bg-emerald-55 px-1 py-0.5 rounded text-[8px]" title="Improving schedule performance vs last month">
+                  <ArrowUpRight className="w-2.5 h-2.5" />
+                </span>
+              ) : spiTrend === 'down' ? (
+                <span className="inline-flex items-center text-rose-600 bg-rose-55 px-1 py-0.5 rounded text-[8px]" title="Declining schedule performance vs last month">
+                  <ArrowDownRight className="w-2.5 h-2.5" />
+                </span>
+              ) : (
+                <span className="inline-flex items-center text-slate-400 bg-slate-50 px-1 py-0.5 rounded text-[8px]" title="No performance change">
+                  <Minus className="w-2 h-2" />
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
