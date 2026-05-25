@@ -77,13 +77,13 @@ export default function AICopilotTerminal({ project, allProjects }: AICopilotTer
     const qLower = question.toLowerCase();
     
     if (qLower.includes('delay') || qLower.includes('late') || qLower.includes('behind')) {
-      return `Based on our SPI coefficient of **${spi.toFixed(2)}**, the Drilling MLN Phase 5 project is currently tracking **${spi < 1 ? 'behind schedule' : 'ahead/on timeline'}**. Primary friction stems from ${hiddenDelays.length > 0 ? `unearned progress in cost centers like **${hiddenDelays[0].name}**` : 'mild execution constraints in the active rig operations channel'}. To recover, we advise applying the active acceleration rate of **${alpha.toFixed(1)}x** to adjust drillstring rotational speeds, optimizing desert rig-move operations between Menzel Ledjmet Nord coordinates, and minimizing tripping frequencies. Schedule correction is targeted at **M10-${String(selectedYear).substring(2)}**.`;
+      return `Based on our Schedule Performance Index (SPI) of **${spi.toFixed(2)}**, the project is currently tracking **${spi < 1 ? 'behind schedule' : 'ahead/on timeline'}**. Quantitative schedule variance (SV) shows a progress deviation of **${(actualProgressAtCutoff - plannedProgressAtCutoff).toFixed(1)}%** compared to the target plan at Month **M${C}**. The delay delta stems from ${hiddenDelays.length > 0 ? `zero physical progress milestones on key items like **${hiddenDelays[0].name}** despite accrued spend` : 'minor coordination lag across late activities'}. **Recovery Recommendations**: (1) Accelerate physical resource allocation by applying the active acceleration rate of **${alpha.toFixed(1)}x** to underperforming work breakdown packages. (2) Re-baseline remaining tasks to align chronological planned vs actual S-curve targets by **M10-${String(selectedYear).substring(2)}**. (3) Establish bi-weekly performance checkpoints on trailing activities.`;
     } else if (qLower.includes('overrun') || qLower.includes('cost') || qLower.includes('spent') || qLower.includes('money') || qLower.includes('budget')) {
-      return `The aggregate spending ratio shows **$${totalSpent.toLocaleString()}k** disbursed against an approved **$${totalBudget.toLocaleString()}k** authorized baseline (${budgetSpentPercent.toFixed(1)}% burned). ${overruns.length > 0 ? `We have flagged cost overruns in **${overruns.map(o => o.name).join(', ')}**. For instance, **${overruns[0].name}** has exceeded its budget ceiling by **$${(overruns[0].spent - overruns[0].budget).toLocaleString()}k**.` : 'Currently, no singular cost center has breached its approved budget ceiling, which indicates disciplined field expenditure routing.'} The resulting project-wide Cost Performance Index (CPI) stands at a solid **${cpi.toFixed(2)}**. However, with a Front-Loading Risk index of **${frontLoadingRatio.toFixed(1)}x**, capital is moving faster than physical mechanical progress. We recommend capping mobilization drawdowns until rig-up verification is fully signed off.`;
-    } else if (qLower.includes('sahara') || qLower.includes('algeria') || qLower.includes('field') || qLower.includes('mln')) {
-      return `The **Menzel Ledjmet Nord (MLN)** campaign is characterized by tight Saharan well spacing, deep high-pressure carbonaceous zones, and complex logistical supply chains from Hassi Messaoud. Mud logging reports indicate that heavy mud-weights (clamped at 1.45–1.62 SG with barite additions) are vital during drilling of the active reservoir phases to counteract deep gas influx. We recommend establishing key sand-filter mitigation parameters on all shale shakers, especially during desert windstorms (sirocco seasons), to avoid physical equipment deterioration.`;
+      return `The aggregate spending ratio shows **$${totalSpent.toLocaleString()}k** disbursed against an approved **$${totalBudget.toLocaleString()}k** authorized baseline (${budgetSpentPercent.toFixed(1)}% of total budget burned). The resulting project-wide Cost Performance Index (CPI) stands at **${cpi.toFixed(2)}**, indicating **${cpi < 1 ? 'cost overruns' : 'positive budget savings'}** with a net Cost Variance (CV) of **$${Math.round(totalEarnedValue - totalSpent).toLocaleString()}k**. ${overruns.length > 0 ? `We have flagged budget breaches in **${overruns.map(o => o.name).join(', ')}** (e.g., **${overruns[0].name}** is overspent by **$${(overruns[0].spent - overruns[0].budget).toLocaleString()}k**).` : ''} The critical Front-Loading Ratio of **${frontLoadingRatio.toFixed(2)}x** indicates funding draws are pacing ahead of verified physical achievements. **Recovery Recommendations**: (1) Freeze further drawdowns for overspent cost centers. (2) Tighten milestone-gated payment approval criteria to protect capital. (3) Restructure contract deliverables to lock in fixed-cost guarantees.`;
+    } else if (qLower.includes('variance') || qLower.includes('indicator') || qLower.includes('spi') || qLower.includes('cpi') || qLower.includes('evm')) {
+      return `The integrated EVM control indicators identify an SPI of **${spi.toFixed(2)}** and CPI of **${cpi.toFixed(2)}**. These metrics indicate a **${spi < 1 ? 'schedule-delayed' : 'schedule-stable'}** and **${cpi < 1 ? 'cost-deficient' : 'cost-disciplined'}** performance matrix. The Front-Loading Ratio of **${frontLoadingRatio.toFixed(2)}x** warns of capital consumption pacing ahead of physical work package completion. **Recovery Recommendations**: (1) Shift active labor coordinates from highly funded but low-progress tasks to high-weight underperforming tasks. (2) Standardize monthly S-curve slope checks to catch cash-burn deviations early. (3) Utilize the progressive **${alpha.toFixed(1)}x** acceleration coefficient to protect overall project internal rate of return (IRR).`;
     } else {
-      return `Diagnostic audit completed for your custom query concerning "${question}". Our MLN Controls Engine has cross-referenced your input with the 12-month spreadsheet ledger.\n\n**Current Year KPI Overlay**: Approved Budget: **$${totalBudget.toLocaleString()}k** | Current SPI: **${spi.toFixed(2)}** | Earned CPI: **${cpi.toFixed(2)}** | Wellbore Confidence: **${confidencePercent}%**.\n\nTo maximize efficiency, we recommend maintaining physical milestones ahead of cash outlays and auditing field contractor work orders weekly.`;
+      return `Diagnostic audit completed for your custom query concerning "${question}". Our MLN Controls Engine has cross-referenced your input with the 12-month spreadsheet ledger.\n\n**Current Year KPI Overlay**: Approved Budget: **$${totalBudget.toLocaleString()}k** | Current SPI: **${spi.toFixed(2)}** | Earned CPI: **${cpi.toFixed(2)}** | Controls Health Score: **${confidencePercent}%**.\n\nTo maximize efficiency, we recommend maintaining physical milestones ahead of cash outlays and auditing field contractor work progress weekly.`;
     }
   };
 
@@ -111,26 +111,28 @@ export default function AICopilotTerminal({ project, allProjects }: AICopilotTer
 
   // Function to copy report contents
   const handleCopyReport = () => {
-    const reportText = `DRILLCONTROL™ AI CONTROL WELLBORE AUDIT REPORT (${selectedYear})
+    const reportText = `DRILLCONTROL™ PROJECT CONTROLS PERFORMANCE ANALYTICAL REPORT (${selectedYear})
 ============================================================
-Campaign: ${project.name}
-Reporting Month: Month ${C}
-Wellbore Confidence Score: ${confidencePercent}%
-Schedule Performance Index (SPI): ${spi.toFixed(2)} (${spi >= 1.0 ? 'On/Ahead of Schedule' : 'Behind Schedule'})
-Cost Performance Index (CPI): ${cpi.toFixed(2)} (${cpi >= 1.0 ? 'Within Budget' : 'Overrun Risk'})
-Front-Loading Ratio: ${frontLoadingRatio.toFixed(2)}x
+Project Campaign: ${project.name}
+Reporting Index: Month M${C}
+Performance Confidence Score: ${confidencePercent}%
+Schedule Performance Index (SPI): ${spi.toFixed(2)} (${spi >= 1.0 ? 'Schedule Compliant/Ahead' : 'Schedule Critical Delay'})
+Cost Performance Index (CPI): ${cpi.toFixed(2)} (${cpi >= 1.0 ? 'Cost Efficient' : 'Cost Overrun Risk'})
+Front-Loading Coefficient: ${frontLoadingRatio.toFixed(2)}x
 
-FINANCIAL & PHYSICAL HEALTH BRIEF:
-- Baseline Approved Capital: $${totalBudget.toLocaleString()}k
-- Verified Accrued Spend (AC): $${totalSpent.toLocaleString()}k (${budgetSpentPercent.toFixed(1)}% consumed)
-- Earned Value (EV) Physical Worth: $${Math.round(totalEarnedValue).toLocaleString()}k
-${overruns.length > 0 ? `- EXPENDITURE CRITICAL OVERRUNS: ${overruns.length} cost centers flagged (${overruns.map(o => o.name).join(', ')})` : '- EXPENDITURE STATUS: No individual cost center limits breached.'}
-${hiddenDelays.length > 0 ? `- MILESTONES CAUTION: ${hiddenDelays.length} centers have accrued spent cash but 0% progress (${hiddenDelays.map(h => h.name).join(', ')})` : '- MILESTONES STATUS: No zero-earned progress outliers.'}
+FINANCIAL & PERFORMANCE HEALTH METRICS:
+- Approved Baseline Capital (BAC): $${totalBudget.toLocaleString()}k
+- Actual Cost of Work Performed (ACWP): $${totalSpent.toLocaleString()}k (${budgetSpentPercent.toFixed(1)}% budget consumed)
+- Earned Value of Work Performed (BCWP): $${Math.round(totalEarnedValue).toLocaleString()}k
+- Schedule Variance (SV): ${(actualProgressAtCutoff - plannedProgressAtCutoff).toFixed(1)}% S-curve progress deviation
+- Cost Variance (CV): $${Math.round(totalEarnedValue - totalSpent).toLocaleString()}k
+${overruns.length > 0 ? `- OVERRUN OUTLIERS: ${overruns.length} cost centers flagged (${overruns.map(o => o.name).join(', ')})` : '- EXPENDITURE STATUS: All individual accounts remain within approved budget ceilings.'}
+${hiddenDelays.length > 0 ? `- UNDERPERFORMING WBS ACCRUALS: ${hiddenDelays.length} accounts have recorded cash expenditures but 0% physical progress (${hiddenDelays.map(h => h.name).join(', ')})` : '- WORK ACCRUAL STATUS: No zero-progress transaction anomalies detected.'}
 
-AI RECOMMENDED DECISIONS CHECKLIST:
-1. Target remaining rigging activities on lazy or zero-earned items like "${hiddenDelays.length > 0 ? hiddenDelays[0].name : 'undeclared cost centers'}" first.
-2. Maintain mud logging specific gravity (SG) at 1.45–1.62 range under active recovery rate ${alpha.toFixed(1)}x to avoid deep gas influx delays in the Saharan reservoir.
-3. Tighten monthly audit cycles to correct the active ${frontLoadingRatio.toFixed(1)}x Front-Loading drawdowns.
+AI PROJECT CONTROLS RECOVERY & ACCELERATION RECOMMENDATIONS:
+1. Reallocate physical equipment and personnel to underperforming high-weight WBS work packages with zero-earned progress, particularly "${hiddenDelays.length > 0 ? hiddenDelays[0].name : 'pending WBS areas'}", to restore schedule velocity.
+2. Apply the active physical acceleration rate of ${alpha.toFixed(1)}x to re-engineering chronological target dates and recover the S-curve trajectory by M10.
+3. Structure tighter milestone-gated funding approvals to address and correct the active high ${frontLoadingRatio.toFixed(2)}x Front-Loading multiplier.
 
 Generated via DrillControl™ AI Systems on ${new Date().toISOString().split('T')[0]}`;
 
@@ -178,10 +180,10 @@ Generated via DrillControl™ AI Systems on ${new Date().toISOString().split('T'
           </div>
           <div>
             <h3 className="text-sm font-black text-slate-100 uppercase tracking-widest flex items-center gap-2">
-              DrillControl™ MLN AI Advisory Copilot
+              DrillControl™ MLN Project Controls AI Advisory Copilot
             </h3>
             <p className="text-[11px] text-slate-400 font-medium leading-tight">
-              S-Curve analytical diagnostic model optimized for deep Saharan onshore campaigns.
+              EVM and S-Curve performance diagnostic module for real-time tracking, forecasting, and recovery.
             </p>
           </div>
         </div>
@@ -227,10 +229,10 @@ Generated via DrillControl™ AI Systems on ${new Date().toISOString().split('T'
               </span>
             </div>
 
-            {/* Confidence Slider Card */}
+            {/* Controls Health Score Slider Card */}
             <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-800 text-left flex flex-col justify-center">
               <div className="flex justify-between text-[9px] text-slate-500 uppercase font-bold font-mono tracking-wider">
-                <span>Wellbore Confidence</span>
+                <span>Controls Health Score</span>
                 <span className="text-blue-400 font-extrabold">{confidencePercent}%</span>
               </div>
               <div className="w-full bg-slate-850 h-1.5 rounded-full overflow-hidden mt-2">
@@ -314,14 +316,14 @@ Generated via DrillControl™ AI Systems on ${new Date().toISOString().split('T'
                 <div className="max-w-md">
                   <h5 className="font-bold text-slate-200">Advisory Engine Idle</h5>
                   <p className="text-[11px] text-slate-500 mt-1 mb-4 leading-normal">
-                    Execute the controls audit to inspect deep-well mathematical variances, desert logistical forecasting, mud logging requirements, and contract performance trends.
+                    Execute the controls audit to analyze earned value indicators, schedule/cost variances, S-curve regressions, and project health indicators.
                   </p>
                   <button
                     onClick={handleStartAudit}
                     className="mx-auto py-2 px-5 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-md active:scale-95"
                   >
                     <Play className="w-3.5 h-3.5 text-emerald-300 fill-emerald-300" />
-                    <span>Execute AI Controls & Wellbore Audit</span>
+                    <span>Execute AI Performance & EVM Analysis</span>
                   </button>
                 </div>
               </div>
@@ -331,10 +333,10 @@ Generated via DrillControl™ AI Systems on ${new Date().toISOString().split('T'
               <div className="py-8 flex flex-col items-center justify-center text-center space-y-3.5">
                 <RefreshCw className="w-7 h-7 text-blue-500 animate-spin" />
                 <div className="font-mono text-[10px] text-slate-500 space-y-1 max-w-sm">
-                  <p className="text-blue-400 font-bold">[LOG] COMPILING GEOLOGICAL AND LEDGER REGRESSIONS...</p>
-                  {auditStep >= 1 && <p className="animate-fade-in text-slate-400">▶ Loaded monthly S-curve points for M1-M12 on Year {selectedYear}</p>}
-                  {auditStep >= 2 && <p className="animate-fade-in text-slate-400">▶ Solved differential equations for active front-loading ratios</p>}
-                  {auditStep >= 3 && <p className="animate-fade-in text-amber-400">▶ Evaluated unearned capital blockages in critical drilling zones</p>}
+                  <p className="text-blue-400 font-bold">[LOG] COMPILING EARNED VALUE (EVM) AND LEDGER INTEGRATIONS...</p>
+                  {auditStep >= 1 && <p className="animate-fade-in text-slate-400">▶ Loaded monthly S-curve performance targets for Year {selectedYear}</p>}
+                  {auditStep >= 2 && <p className="animate-fade-in text-slate-400">▶ Calculated cumulative planned vs actual variances and ratios</p>}
+                  {auditStep >= 3 && <p className="animate-fade-in text-amber-400">▶ Identified work breakdown components with spent-to-progress gaps</p>}
                 </div>
               </div>
             )}
@@ -342,40 +344,71 @@ Generated via DrillControl™ AI Systems on ${new Date().toISOString().split('T'
             {showResult && !isAuditing && (
               <div className="space-y-4 animate-fade-in text-xs max-h-[350px] overflow-y-auto pr-1 select-text">
                 <p className="text-slate-300">
-                  We have concluded the project controls assessment for the <strong className="text-blue-400 font-black">{project.name}</strong> campaign. The active data highlights a 
-                  <span className={`font-semibold ${spi < 1 ? ' text-rose-300' : ' text-emerald-300'}`}>
-                    {spi < 1 ? ' schedule latency' : ' fast-track operational schedule status'}
-                  </span> with an index of <span className="font-mono font-bold">{spi.toFixed(2)}</span>.
+                  Analytical assessment concluded for project <strong className="text-blue-400 font-black">{project.name}</strong>. At Month <span className="font-mono text-slate-200">M{C}</span>, the project shows <span className={`font-semibold ${spi < 1 ? ' text-rose-300' : ' text-emerald-300'}`}>
+                    {spi < 1 ? 'cumulative schedule delay' : 'steady progress alignment'}
+                  </span> with an Schedule Performance Index (SPI) of <span className="font-mono font-bold text-slate-200">{spi.toFixed(2)}</span> and a Cost Performance Index (CPI) of <span className="font-mono font-bold text-slate-200">{cpi.toFixed(2)}</span>.
                 </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/50 p-3 rounded-lg border border-slate-850">
-                  <div className="space-y-1">
-                    <span className="block text-[9px] uppercase font-bold text-slate-500 font-mono">Cost Ledger Status</span>
-                    <p className="text-[11px]">
-                      Disbursed cap: <span className="font-mono font-bold text-slate-200">${totalSpent.toLocaleString()}k</span> vs limit <span className="font-mono text-slate-200">${totalBudget.toLocaleString()}k</span>. Cost Performance Index (CPI) stands at <strong className="text-slate-200">{cpi.toFixed(2)}</strong>.
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="block text-[9px] uppercase font-bold text-slate-500 font-mono">Geotechnical Condition</span>
-                    <p className="text-[11px]">
-                      Menzel Ledjmet Nord requires mud density between <span className="font-mono text-slate-200 text-semibold">1.45-1.62 SG</span> to resist pressure zones. Under the active <span className="font-mono font-bold text-emerald-400">{alpha.toFixed(1)}x</span> recovery rate, casing cycle speeds must be protected.
-                    </p>
-                  </div>
+                <div className="overflow-x-auto border border-slate-800 rounded-lg">
+                  <table className="w-full text-left border-collapse text-[10.5px] font-mono">
+                    <thead>
+                      <tr className="bg-slate-950 text-slate-400 border-b border-slate-800">
+                        <th className="p-2">EVM Performance Indicator</th>
+                        <th className="p-2 text-right">Value</th>
+                        <th className="p-2 text-right">Variance / Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-850 bg-slate-900/40">
+                      <tr>
+                        <td className="p-2 text-slate-300">Baseline Capital Budget (BAC)</td>
+                        <td className="p-2 text-right font-bold text-slate-200">${totalBudget.toLocaleString()}k</td>
+                        <td className="p-2 text-right text-slate-500">Authorized</td>
+                      </tr>
+                      <tr>
+                        <td className="p-2 text-slate-300">Earned Value (EV / BCWP)</td>
+                        <td className="p-2 text-right font-bold text-slate-200">${Math.round(totalEarnedValue).toLocaleString()}k</td>
+                        <td className="p-2 text-right text-slate-400">Physical Worth</td>
+                      </tr>
+                      <tr>
+                        <td className="p-2 text-slate-300">Actual Spent Cost (AC / ACWP)</td>
+                        <td className="p-2 text-right font-bold text-slate-200">${totalSpent.toLocaleString()}k</td>
+                        <td className="p-2 text-right text-slate-400">({budgetSpentPercent.toFixed(1)}% burned)</td>
+                      </tr>
+                      <tr>
+                        <td className="p-2 text-slate-300">Cost Variance (CV = EV - AC)</td>
+                        <td className={`p-2 text-right font-extrabold ${(totalEarnedValue - totalSpent) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          ${Math.round(totalEarnedValue - totalSpent).toLocaleString()}k
+                        </td>
+                        <td className={`p-2 text-right text-[9px] font-bold ${(totalEarnedValue - totalSpent) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                          {((totalEarnedValue - totalSpent) >= 0) ? 'SURPLUS' : 'DEFICIT OVERRUN'}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="p-2 text-slate-300">Schedule Progress Variance (SV)</td>
+                        <td className={`p-2 text-right font-extrabold ${(actualProgressAtCutoff - plannedProgressAtCutoff) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {(actualProgressAtCutoff - plannedProgressAtCutoff).toFixed(1)}%
+                        </td>
+                        <td className={`p-2 text-right text-[9px] font-bold ${(actualProgressAtCutoff - plannedProgressAtCutoff) >= 0 ? 'text-emerald-500' : 'text-rose-455'}`}>
+                          {((actualProgressAtCutoff - plannedProgressAtCutoff) >= 0) ? 'AHEAD' : 'BEHIND STATUS'}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
 
                 <div className="space-y-1.5 text-slate-400">
-                  <span className="block text-[9px] uppercase font-bold text-slate-500 font-mono">Flagged Work Center Anomalies</span>
+                  <span className="block text-[9px] uppercase font-bold text-slate-500 font-mono">Flagged Work Package Anomalies</span>
                   <ul className="list-disc pl-4 space-y-1 text-[11px]">
                     {overruns.length > 0 ? (
                       <li className="text-rose-300">
                         <strong>Budget Breach</strong>: Cost center <span className="text-rose-200 underline decoration-dotted">{overruns[0].name}</span> is overspent by <span className="font-mono text-rose-250 font-black">${(overruns[0].spent - overruns[0].budget).toLocaleString()}k</span>.
                       </li>
                     ) : (
-                      <li className="text-emerald-400/90 font-medium">No active individual work-center budget breaches recorded.</li>
+                      <li className="text-emerald-400/90 font-medium">No active individual work-package budget breaches recorded.</li>
                     )}
                     {hiddenDelays.length > 0 ? (
                       <li className="text-amber-300/90">
-                        <strong>Milestone Stagnation</strong>: Spent cash detected on <span className="text-amber-200 font-bold">{hiddenDelays[0].name}</span> while verified progress is <span className="font-mono">0%</span>.
+                        <strong>Milestone Stagnation</strong>: Spent cash detected on <span className="text-amber-200 font-bold">{hiddenDelays[0].name}</span> while verified physical progress is <span className="font-mono">0%</span>.
                       </li>
                     ) : (
                       <li className="text-emerald-400/90 font-medium">No zero-progress payment anomalies flagged.</li>
@@ -383,16 +416,33 @@ Generated via DrillControl™ AI Systems on ${new Date().toISOString().split('T'
                   </ul>
                 </div>
 
-                <div className="p-3 bg-slate-950 text-[10.5px] rounded-lg border border-slate-850 text-slate-350 space-y-1 font-mono leading-relaxed">
-                  <span className="font-bold text-blue-400 uppercase text-[9px] block">AI RECOMMENDED DECISIONS CHECKLIST</span>
-                  <div>• Redirect drill rig crews to lazy milestone blocks like {hiddenDelays.length > 0 ? `"${hiddenDelays[0].name}"` : 'undeclared work centers'} immediately.</div>
-                  <div>• Add barite blocks to maintain drilling mud specific gravity high to control carbonaceous reservoir pressure.</div>
-                  <div>• Tighten drawdowns to suppress the active high {frontLoadingRatio.toFixed(2)}x Front-Loading multiplier.</div>
+                <div className="p-3.5 bg-slate-950 text-[10.5px] rounded-lg border border-slate-850 space-y-2 leading-relaxed">
+                  <span className="font-bold text-blue-400 uppercase text-[9px] tracking-widest font-mono block">AI RECOMMENDED RECOVERY ACTIONS</span>
+                  <ul className="space-y-2 list-none text-slate-350">
+                    <li className="flex items-start gap-1.5">
+                      <span className="text-blue-500 font-bold shrink-0 mt-0.5 font-mono">REC-01:</span>
+                      <div>
+                        <strong>Physical Resource Redistribution</strong>: Allocate high-priority equipment and personnel to underperforming, zero-earning nodes with accumulated expenditures (mainly <span className="text-amber-300 font-bold font-mono">"{hiddenDelays.length > 0 ? hiddenDelays[0].name : 'pending WBS elements'}"</span>). This will directly improve physical progress and correct the schedule velocity index to targets.
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <span className="text-blue-500 font-bold shrink-0 mt-0.5 font-mono">REC-02:</span>
+                      <div>
+                        <strong>Apply S-Curve Trajectory Recovery</strong>: Leverage the active S-curve <span className="font-bold text-slate-200 font-mono">{alpha.toFixed(1)}x</span> recovery acceleration factor to expedite sequential critical path activities. This adjusts scheduled targets dynamically to close the current <span className="text-rose-300 font-bold font-mono">{(plannedProgressAtCutoff - actualProgressAtCutoff).toFixed(1)}%</span> schedule target gap.
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <span className="text-blue-500 font-bold shrink-0 mt-0.5 font-mono">REC-03:</span>
+                      <div>
+                        <strong>Cap Front-Loading Multipliers</strong>: Tighten drawdowns and align monthly contractor cash disbursements directly to verified milestone percentages. Addressing the high <span className="font-bold text-slate-200 font-mono">{frontLoadingRatio.toFixed(2)}x</span> front-loading ratio reduces capital exposure during early phases.
+                      </div>
+                    </li>
+                  </ul>
                 </div>
 
                 <div className="flex justify-between items-center bg-slate-950 px-3 py-1 text-[9px] text-slate-500 rounded font-mono">
-                  <span>Audit Code: MLN-DIAG-001-COMPLIANT</span>
-                  <span>Engine: Controls-v5.3</span>
+                  <span>Performance Reference Code: MLN-INDICATORS-001-COMPLIANT</span>
+                  <span>EVM Engine: Controls-v5.3</span>
                 </div>
               </div>
             )}

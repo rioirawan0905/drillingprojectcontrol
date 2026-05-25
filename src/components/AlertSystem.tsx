@@ -175,7 +175,7 @@ export default function AlertSystem({ project }: AlertSystemProps) {
               <div className="text-xs space-y-1">
                 <p className="font-bold text-slate-800">3. Audit Capital Drawdowns:</p>
                 <p className="text-slate-500 leading-relaxed">
-                  Halt further cost allocations to <strong>{hiddenDelayItems.map(i => i.name).join(', ')}</strong> until desert site supervisors submit physical casing and wellbore checklists to confirm real progress.
+                  Halt further cost allocations to <strong>{hiddenDelayItems.map(i => i.name).join(', ')}</strong> until supervisors submit validated physical progress milestones and work-breakdown checklists to confirm real performance.
                 </p>
               </div>
             )}

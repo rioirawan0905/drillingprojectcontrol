@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { INITIAL_PROJECTS } from './data';
 import { ProjectYearData } from './types';
 import SidebarControls from './components/SidebarControls';
@@ -14,7 +14,7 @@ import WBSCostChart from './components/WBSCostChart';
 import AICopilotTerminal from './components/AICopilotTerminal';
 import AlertSystem from './components/AlertSystem';
 import FormulaGlossary from './components/FormulaGlossary';
-import { Compass, CalendarDays, FileSpreadsheet, Download, FileText } from 'lucide-react';
+import { Compass, CalendarDays, FileSpreadsheet, Download, FileText, Check, Upload } from 'lucide-react';
 
 const normalizeProjectData = (project: ProjectYearData): ProjectYearData => {
   const C = project.reportingMonth;
@@ -134,6 +134,149 @@ export default function App() {
     document.body.removeChild(link);
   };
 
+  const handleImportCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      if (!text) return;
+
+      const lines = text.split(/\r?\n/);
+      
+      let year = selectedYear;
+      let name = currentProject.name;
+      let reportingMonth = currentProject.reportingMonth;
+      let accelerationFactor = currentProject.accelerationFactor;
+      const wbsList: typeof currentProject.wbsList = [];
+      const monthlyData: typeof currentProject.monthlyData = [];
+
+      let currentSection = "";
+
+      for (let line of lines) {
+        line = line.trim();
+        if (!line) continue;
+
+        if (line.startsWith("Project Name,")) {
+          name = line.substring("Project Name,".length).replace(/^"|"$/g, '').trim();
+          continue;
+        }
+        if (line.startsWith("Selected Plan Year,")) {
+          const val = parseInt(line.substring("Selected Plan Year,".length).trim(), 10);
+          if (!isNaN(val)) year = val;
+          continue;
+        }
+        if (line.startsWith("Active Reporting Month,")) {
+          const valStr = line.substring("Active Reporting Month,".length).replace(/^M/, '').trim();
+          const val = parseInt(valStr, 10);
+          if (!isNaN(val)) reportingMonth = val;
+          continue;
+        }
+        if (line.startsWith("Future Recovery Rate Factor,")) {
+          const valStr = line.substring("Future Recovery Rate Factor,".length).replace(/x$/, '').trim();
+          const val = parseFloat(valStr);
+          if (!isNaN(val)) accelerationFactor = val;
+          continue;
+        }
+
+        if (line.includes("SECTION 1: WORK BREAKDOWN STRUCTURE")) {
+          currentSection = "WBS";
+          continue;
+        }
+        if (line.includes("SECTION 2: 12-MONTH CHRONOLOGICAL S-CURVE DATA")) {
+          currentSection = "SCURVE";
+          continue;
+        }
+
+        if (line.startsWith("WBS Index,") || line.startsWith("Month,Date Label,")) {
+          continue;
+        }
+
+        const cells: string[] = [];
+        let inQuotes = false;
+        let currentCell = "";
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            cells.push(currentCell.trim());
+            currentCell = "";
+          } else {
+            currentCell += char;
+          }
+        }
+        cells.push(currentCell.trim());
+
+        if (currentSection === "WBS" && cells.length >= 5) {
+          const wbsIndex = cells[0];
+          const wbsName = cells[1].replace(/^"|"$/g, '');
+          const budget = parseFloat(cells[2].replace(/[$,]/g, ''));
+          const spent = parseFloat(cells[3].replace(/[$,]/g, ''));
+          const progress = parseFloat(cells[4].replace(/%/g, ''));
+
+          if (wbsIndex && !isNaN(budget) && !isNaN(spent) && !isNaN(progress)) {
+            wbsList.push({
+              id: `wbs-imported-${wbsIndex.replace(/[^a-zA-Z0-9]/g, '')}`,
+              name: wbsName || `Work Area ${wbsIndex}`,
+              budget,
+              spent,
+              progress: Math.min(100, Math.max(0, progress))
+            });
+          }
+        } else if (currentSection === "SCURVE" && cells.length >= 8) {
+          const mStr = cells[0].replace(/^M/, '').trim();
+          const monthNum = parseInt(mStr, 10);
+          
+          const targetCumulativeProgress = parseFloat(cells[3].replace(/%/g, ''));
+          const actualCumStr = cells[5];
+          const actualCumulativeProgress = (actualCumStr === "N/A" || actualCumStr === "") ? null : parseFloat(actualCumStr.replace(/%/g, ''));
+
+          const targetCashFlow = parseFloat(cells[6].replace(/[$,]/g, ''));
+          const actualCashStr = cells[7];
+          const actualCashFlow = (actualCashStr === "N/A" || actualCashStr === "") ? null : parseFloat(actualCashStr.replace(/[$,]/g, ''));
+
+          if (!isNaN(monthNum) && !isNaN(targetCumulativeProgress) && !isNaN(targetCashFlow)) {
+            monthlyData.push({
+              month: monthNum,
+              targetCumulativeProgress,
+              actualCumulativeProgress: isNaN(actualCumulativeProgress as number) ? null : actualCumulativeProgress,
+              targetCashFlow,
+              actualCashFlow: isNaN(actualCashFlow as number) ? null : actualCashFlow,
+            });
+          }
+        }
+      }
+
+      if (wbsList.length > 0 || monthlyData.length > 0) {
+        const importedProject: ProjectYearData = {
+          year,
+          name: name || `Project ${year} (Imported)`,
+          reportingMonth: reportingMonth,
+          accelerationFactor: accelerationFactor,
+          wbsList: wbsList.length > 0 ? wbsList : currentProject.wbsList,
+          monthlyData: monthlyData.length === 12 ? monthlyData : currentProject.monthlyData,
+        };
+
+        setSelectedYear(year);
+        setProjects((prev) => {
+          const exists = prev.some((p) => p.year === year);
+          if (exists) {
+            return prev.map((p) => (p.year === year ? normalizeProjectData(importedProject) : p));
+          } else {
+            return [...prev, normalizeProjectData(importedProject)];
+          }
+        });
+      } else {
+        alert("Could not identify valid WBS or S-Curve blocks in the CSV. Please make sure the layout matches the exported format.");
+      }
+    };
+
+    reader.readAsText(file);
+    event.target.value = "";
+  };
+
   const handleExportPDF = () => {
     window.print();
   };
@@ -160,15 +303,35 @@ export default function App() {
 
           <div id="header-action-rails" className="flex items-center gap-2.5 flex-wrap self-end sm:self-auto">
             {/* Quick indicators */}
+            <div className="flex items-center gap-1.5 bg-emerald-55/65 border border-emerald-200/50 rounded-lg px-2.5 py-1.5 text-xs text-emerald-800 font-medium font-sans">
+              <Check className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Auto-Saved to Browser</span>
+            </div>
+
             <div className="hidden md:flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-500 font-medium">
               <CalendarDays className="w-3.5 h-3.5 text-blue-500" />
               <span>Reporting Horizon: <span className="font-bold text-slate-800 font-mono">12 Months</span></span>
             </div>
 
-            {/* Export buttons */}
+            {/* Export & Import buttons */}
+            <label
+              htmlFor="import-csv-file"
+              className="text-xs font-bold text-slate-700 border border-slate-200 hover:border-violet-200 bg-white hover:bg-violet-50/50 px-3 py-1.5 rounded-lg transition-all cursor-pointer shadow-3xs flex items-center gap-1.5"
+            >
+              <Upload className="w-3.5 h-3.5 text-violet-600" />
+              Import CSV
+            </label>
+            <input
+              type="file"
+              id="import-csv-file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleImportCSV}
+            />
+
             <button
-              onClick={handleExportCSV}
-              className="text-xs font-bold text-slate-700 border border-slate-200 hover:border-blue-200 bg-white hover:bg-blue-50/50 px-3 py-1.5 rounded-lg transition-all cursor-pointer shadow-3xs flex items-center gap-1.5"
+               onClick={handleExportCSV}
+               className="text-xs font-bold text-slate-700 border border-slate-200 hover:border-blue-200 bg-white hover:bg-blue-50/50 px-3 py-1.5 rounded-lg transition-all cursor-pointer shadow-3xs flex items-center gap-1.5"
             >
               <Download className="w-3.5 h-3.5 text-blue-600" />
               Export CSV
