@@ -68,6 +68,8 @@ export default function App() {
     classification: "CONFIDENTIAL / INTERNAL USE ONLY",
     includeCoverPage: true,
     includeKPIs: true,
+    includeCharts: true,
+    chartsScope: 'year' as 'year' | 'campaign',
     includeLedger: true,
     includeWBS: true,
     includeAdvisory: true,
@@ -439,6 +441,7 @@ export default function App() {
       {/* Dedicate print-only component rendered on-demand */}
       <PrintReportView
         project={currentProject}
+        allProjects={projects}
         config={printConfig}
         orientation={printOrientation}
       />
@@ -565,9 +568,45 @@ export default function App() {
                 </div>
               </div>
 
+              {/* S-Curve and Cost Charts Options */}
+              <div className="bg-blue-50/40 p-4 rounded-xl border border-blue-100 grid grid-cols-1 md:grid-cols-2 gap-4 col-span-1 md:col-span-2 select-text">
+                <div className="col-span-1 md:col-span-2 flex justify-between items-center bg-blue-50/50 p-2 rounded">
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-blue-900 font-mono">4. Performance Graphics Selector</span>
+                  <button
+                    type="button"
+                    onClick={() => setPrintConfig(prev => ({ ...prev, includeCharts: !prev.includeCharts }))}
+                    className={`flex items-center gap-2 px-2.5 py-1 rounded text-[10px] font-bold transition-all border shrink-0 cursor-pointer ${printConfig.includeCharts ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-505 border-slate-200'}`}
+                  >
+                    {printConfig.includeCharts ? '✓ Graphs Included' : '✖ Graphs Excluded'}
+                  </button>
+                </div>
+                
+                {printConfig.includeCharts && (
+                  <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setPrintConfig(prev => ({ ...prev, chartsScope: 'year' }))}
+                      className={`flex flex-col p-2.5 border rounded-lg text-left transition-all cursor-pointer ${printConfig.chartsScope === 'year' ? 'border-blue-600 bg-white ring-2 ring-blue-600/10' : 'border-slate-200 hover:bg-white bg-slate-50/20'}`}
+                    >
+                      <span className="text-[10px] font-bold text-slate-850 leading-none">Selected Year ({selectedYear})</span>
+                      <span className="text-[9px] text-slate-455 mt-1 block leading-tight">Plots S-Curve and expenditure drawdown specifically for the single selected fiscal timeline.</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPrintConfig(prev => ({ ...prev, chartsScope: 'campaign' }))}
+                      className={`flex flex-col p-2.5 border rounded-lg text-left transition-all cursor-pointer ${printConfig.chartsScope === 'campaign' ? 'border-blue-600 bg-white ring-2 ring-blue-600/10' : 'border-slate-200 hover:bg-white bg-slate-50/20'}`}
+                    >
+                      <span className="text-[10px] font-bold text-slate-855 leading-none">Full Campaign (2025-2028)</span>
+                      <span className="text-[9px] text-slate-455 mt-1 block leading-tight">Amalgamates data across all four physical wells to graph the complete master project milestone trajectory.</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {/* Toggles for Section Inclusions */}
               <div>
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-2.5 font-mono">4. Select Sections to Include in Report</span>
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-2.5 font-mono">5. Select Sections to Include in Report</span>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {[
                     { key: 'includeCoverPage', label: 'Formal Cover Page' },

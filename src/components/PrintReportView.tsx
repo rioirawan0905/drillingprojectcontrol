@@ -8,6 +8,7 @@ import { ProjectYearData, WBSItem } from '../types';
 
 interface PrintReportViewProps {
   project: ProjectYearData;
+  allProjects?: ProjectYearData[];
   config: {
     title: string;
     subtitle: string;
@@ -15,6 +16,8 @@ interface PrintReportViewProps {
     classification: string;
     includeCoverPage: boolean;
     includeKPIs: boolean;
+    includeCharts?: boolean;
+    chartsScope?: 'year' | 'campaign';
     includeLedger: boolean;
     includeWBS: boolean;
     includeAdvisory: boolean;
@@ -24,7 +27,7 @@ interface PrintReportViewProps {
   orientation: 'portrait' | 'landscape';
 }
 
-export default function PrintReportView({ project, config, orientation }: PrintReportViewProps) {
+export default function PrintReportView({ project, allProjects, config, orientation }: PrintReportViewProps) {
   const C = project.reportingMonth;
   const currentMonthData = project.monthlyData.find((m) => m.month === C) || project.monthlyData[C - 1];
 
@@ -95,6 +98,161 @@ export default function PrintReportView({ project, config, orientation }: PrintR
       badge: 'bg-neutral-100 text-black border-black',
     }
   }[config.colorTheme];
+  
+  // --- CHART METRIC DATA PREPARATION ---
+  const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const sortedYears = [...(allProjects || [project])].sort((a, b) => a.year - b.year);
+  const selectedYear = project.year;
+  const activeYearIndex = sortedYears.findIndex(p => p.year === selectedYear);
+  const alpha = project.accelerationFactor;
+
+  const getProjectBudget = (p: ProjectYearData) => {
+    return p.wbsList.reduce((sum, item) => sum + item.budget, 0);
+  };
+
+  const budgetsByYear = sortedYears.reduce((acc, p) => {
+    acc[p.year] = getProjectBudget(p);
+    return acc;
+  }, {} as Record<number, number>);
+
+  const totalCampaignBudget = Object.values(budgetsByYear).reduce((sum, b) => sum + b, 0) || 1;
+
+  const timelineData: Array<{
+    label: string;
+    targetCumulativeProgress: number;
+    actualCumulativeProgress: number | null;
+    recoveryCumulativeProgress: number | null;
+    targetCashFlow: number;
+    actualCashFlow: number | null;
+  }> = [];
+
+  if (config.chartsScope === 'campaign' && allProjects && allProjects.length > 0) {
+    // CAMPAIGN TIMELINE GENERATION
+    sortedYears.forEach((yData) => {
+      const yBudget = budgetsByYear[yData.year];
+      yData.monthlyData.forEach((mItem) => {
+        const label = `${MONTH_SHORT[mItem.month - 1]}-${String(yData.year).substring(2)}`;
+        
+        const priorYearsBudget = sortedYears
+          .filter(p => p.year < yData.year)
+          .reduce((sum, p) => sum + budgetsByYear[p.year], 0);
+
+        const targetCampProg = ((priorYearsBudget + (mItem.targetCumulativeProgress / 100) * yBudget) / totalCampaignBudget) * 100;
+
+        let actualCampProg: number | null = null;
+        const isCompletedYear = yData.year < selectedYear;
+        const hasActualProgress = mItem.actualCumulativeProgress !== null;
+
+        if (isCompletedYear) {
+          const actVal = mItem.actualCumulativeProgress ?? mItem.targetCumulativeProgress;
+          actualCampProg = ((priorYearsBudget + (actVal / 100) * yBudget) / totalCampaignBudget) * 100;
+        } else if (yData.year === selectedYear && hasActualProgress) {
+          actualCampProg = ((priorYearsBudget + (mItem.actualCumulativeProgress! / 100) * yBudget) / totalCampaignBudget) * 100;
+        }
+
+        timelineData.push({
+          label,
+          targetCumulativeProgress: Number(targetCampProg.toFixed(1)),
+          actualCumulativeProgress: actualCampProg !== null ? Number(actualCampProg.toFixed(1)) : null,
+          recoveryCumulativeProgress: null,
+          targetCashFlow: mItem.targetCashFlow,
+          actualCashFlow: isCompletedYear 
+            ? (mItem.actualCashFlow ?? mItem.targetCashFlow) 
+            : (yData.year === selectedYear ? mItem.actualCashFlow : null),
+        });
+      });
+    });
+
+    // Recovery starting at active year's cutoff
+    const cutoffSeqIndex = activeYearIndex >= 0 ? activeYearIndex * 12 + C - 1 : 0;
+    const lastActualAtCutoff = cutoffSeqIndex >= 0 && cutoffSeqIndex < timelineData.length 
+      ? (timelineData[cutoffSeqIndex]?.actualCumulativeProgress ?? 0) 
+      : 0;
+    const lastTargetAtCutoff = cutoffSeqIndex >= 0 && cutoffSeqIndex < timelineData.length 
+      ? (timelineData[cutoffSeqIndex]?.targetCumulativeProgress ?? 0) 
+      : 0;
+
+    timelineData.forEach((pt, idx) => {
+      if (idx < cutoffSeqIndex) {
+        pt.recoveryCumulativeProgress = null;
+      } else if (idx === cutoffSeqIndex) {
+        pt.recoveryCumulativeProgress = lastActualAtCutoff;
+      } else {
+        const targetGap = 100 - lastTargetAtCutoff;
+        const currentTarget = pt.targetCumulativeProgress;
+        const progressProportion = targetGap > 0 
+          ? (currentTarget - lastTargetAtCutoff) / targetGap 
+          : 0;
+
+        const remainingActualNeeded = 100 - lastActualAtCutoff;
+        let recoveryVal = lastActualAtCutoff + (progressProportion * remainingActualNeeded * alpha);
+        recoveryVal = Math.min(100, Math.max(lastActualAtCutoff, recoveryVal));
+        pt.recoveryCumulativeProgress = Number(recoveryVal.toFixed(1));
+      }
+    });
+
+  } else {
+    // SINGLE YEAR TIMELINE GENERATION
+    project.monthlyData.forEach((mItem) => {
+      const label = `${MONTH_SHORT[mItem.month - 1]}-${String(selectedYear).substring(2)}`;
+      const actualAtC = C > 0 && project.monthlyData[C - 1]?.actualCumulativeProgress !== null
+        ? (project.monthlyData[C - 1]?.actualCumulativeProgress ?? 0)
+        : 0;
+      const targetAtC = C > 0 ? (project.monthlyData[C - 1]?.targetCumulativeProgress ?? 0) : 0;
+
+      let recoveryVal = null;
+      if (mItem.month === C) {
+        recoveryVal = actualAtC;
+      } else if (mItem.month > C) {
+        const originalTarget = mItem.targetCumulativeProgress;
+        const remainingPlanGrowth = 100 - targetAtC;
+        const progressProportion = remainingPlanGrowth > 0 
+          ? (originalTarget - targetAtC) / remainingPlanGrowth
+          : 0;
+
+        const remainingActualNeeded = 100 - actualAtC;
+        let calculatedRec = actualAtC + (progressProportion * remainingActualNeeded * alpha);
+        recoveryVal = Math.min(100, Math.max(actualAtC, Math.round(calculatedRec)));
+      }
+
+      const isPastOrCurrent = mItem.month <= C;
+
+      timelineData.push({
+        label,
+        targetCumulativeProgress: mItem.targetCumulativeProgress,
+        actualCumulativeProgress: isPastOrCurrent ? mItem.actualCumulativeProgress : null,
+        recoveryCumulativeProgress: recoveryVal,
+        targetCashFlow: mItem.targetCashFlow,
+        actualCashFlow: isPastOrCurrent ? mItem.actualCashFlow : null,
+      });
+    });
+  }
+
+  const hasActuals = timelineData.some(p => p.actualCumulativeProgress !== null);
+  const hasRecovery = timelineData.some(p => p.recoveryCumulativeProgress !== null);
+
+  // Spend calculations & running trackers
+  let runningTargetCash = 0;
+  let runningActualCash = 0;
+  const cumulativeCashList = timelineData.map((pt) => {
+    runningTargetCash += pt.targetCashFlow;
+    const isPastOrCurrent = pt.actualCashFlow !== null;
+    if (isPastOrCurrent) {
+      runningActualCash += pt.actualCashFlow!;
+    }
+    return {
+      cumTarget: runningTargetCash,
+      cumActual: isPastOrCurrent ? runningActualCash : null,
+    };
+  });
+
+  const totalTargetCash = timelineData.reduce((sum, item) => sum + item.targetCashFlow, 0);
+  const maxCumulativeCash = totalTargetCash * 1.05;
+
+  const maxMonthlyCash = Math.max(
+    ...timelineData.map(item => Math.max(item.targetCashFlow, item.actualCashFlow ?? 0)),
+    100
+  ) * 1.15;
 
   const currentDateString = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
@@ -297,6 +455,233 @@ export default function PrintReportView({ project, config, orientation }: PrintR
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* GRAPHIC CHRONOLOGICAL S-CURVE & CASH FLOW PLOT */}
+      {config.includeCharts && (
+        <div className="space-y-6 break-after-page">
+          <div className={`border-b-2 ${themeColors.border} pb-2.5 flex justify-between items-end`}>
+            <div>
+              <span className="text-[9px] font-bold text-slate-500 font-mono tracking-widest uppercase block">Performance Graphics</span>
+              <h2 className={`text-base font-extrabold uppercase tracking-tight ${themeColors.primaryText}`}>
+                {config.chartsScope === 'campaign' ? 'Campaign Level S-Curve & Cash Flow Plot (2025-2028)' : `${project.year} S-Curve & Cash Flow Performance Curves`}
+              </h2>
+            </div>
+            <div className="text-[10px] text-slate-500 font-mono text-right">
+              EVM Progress Analytics Plot | Scope: {config.chartsScope === 'campaign' ? 'Multi-Year' : 'Selected Year'}
+            </div>
+          </div>
+
+          <p className="text-slate-600 text-[10.5px] leading-relaxed">
+            Graphic visualization showing authorized milestone timelines, cumulative earned progress, and actual capital discursion against targeted baselines.
+          </p>
+
+          <div className="space-y-6">
+            {/* 1. PHYSICAL S-CURVE CHART */}
+            <div className="border border-slate-200 rounded-xl p-4 bg-white space-y-2">
+              <span className="block text-[9.5px] font-bold text-slate-800 uppercase tracking-wider font-sans">
+                Baseline Planned vs Actual Physical S-Curve ({config.chartsScope === 'campaign' ? 'Campaign Progress %' : 'Yearly Progress %'})
+              </span>
+              
+              <div className="w-full flex justify-center">
+                <svg viewBox="0 0 800 240" className="w-full h-auto text-slate-705 bg-white">
+                  {/* Grid Lines */}
+                  {[0, 25, 50, 75, 100].map((tick) => {
+                    const y = 30 + (100 - tick) * 160 / 100;
+                    return (
+                      <g key={`print-s-grid-${tick}`}>
+                        <line x1="50" y1={y} x2="740" y2={y} stroke="#E2E8F0" strokeWidth="1" strokeDasharray="2 2" />
+                        <text x="38" y={y + 3} textAnchor="end" className="text-[9px] font-mono fill-slate-500 font-bold">{tick}%</text>
+                      </g>
+                    );
+                  })}
+
+                  {/* X-axis tick lines & labels */}
+                  {timelineData.map((pt, idx) => {
+                    const isCamp = config.chartsScope === 'campaign';
+                    const showLabel = !isCamp ? (idx % 2 === 0 || idx === 11) : (idx % 6 === 0 || idx === timelineData.length - 1);
+                    const x = 50 + idx * 690 / (timelineData.length - 1);
+                    return (
+                      <g key={`print-s-x-${idx}`}>
+                        <line x1={x} y1="30" x2={x} y2="190" stroke="#F1F5F9" strokeWidth="1" />
+                        {showLabel && (
+                          <text x={x} y="206" textAnchor="middle" className="text-[8.5px] font-bold fill-slate-600 font-mono">{pt.label}</text>
+                        )}
+                      </g>
+                    );
+                  })}
+
+                  {/* Planned Target Path */}
+                  <path
+                    d={timelineData.map((p, i) => `${i === 0 ? 'M' : 'L'} ${50 + i * 690 / (timelineData.length - 1)} ${30 + (100 - p.targetCumulativeProgress) * 160 / 100}`).join(' ')}
+                    fill="none"
+                    stroke="#2563EB"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+
+                  {/* Actual Progress Path */}
+                  {hasActuals && (
+                    <path
+                      d={timelineData.filter(p => p.actualCumulativeProgress !== null).map((p, i) => `${i === 0 ? 'M' : 'L'} ${50 + i * 690 / (timelineData.length - 1)} ${30 + (100 - p.actualCumulativeProgress!) * 160 / 100}`).join(' ')}
+                      fill="none"
+                      stroke="#F97316"
+                      strokeWidth="3.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  )}
+
+                  {/* Recovery Projection Path */}
+                  {hasRecovery && (
+                    <path
+                      d={timelineData.filter(p => p.recoveryCumulativeProgress !== null).map((p, i) => {
+                        const originalIdx = timelineData.findIndex(item => item.label === p.label);
+                        return `${i === 0 ? 'M' : 'L'} ${50 + originalIdx * 690 / (timelineData.length - 1)} ${30 + (100 - p.recoveryCumulativeProgress!) * 160 / 100}`;
+                      }).join(' ')}
+                      fill="none"
+                      stroke="#10B981"
+                      strokeWidth="2.5"
+                      strokeDasharray="4 2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  )}
+
+                  {/* S-Curve Labels / Legend HUD Inside SVG */}
+                  <rect x="55" y="35" width="410" height="22" fill="#F8FAFC" rx="4" stroke="#E2E8F0" strokeWidth="1" />
+                  <g transform="translate(65, 41)">
+                    <circle cx="5" cy="5" r="4" fill="#2563EB" />
+                    <text x="14" y="8" className="text-[8.5px] font-sans fill-slate-705 font-bold">Planned Target Baseline S-Curve</text>
+                    
+                    <circle cx="170" cy="5" r="4" fill="#F97316" />
+                    <text x="179" y="8" className="text-[8.5px] font-sans fill-slate-705 font-bold">Earned Actual Progress</text>
+
+                    <circle cx="300" cy="5" r="4" fill="#10B981" />
+                    <text x="309" y="8" className="text-[8.5px] font-sans fill-slate-705 font-bold">Catch-up Recovery Path</text>
+                  </g>
+                </svg>
+              </div>
+            </div>
+
+            {/* 2. DUAL-AXIS FINANCIAL DRAWDOWN CHART */}
+            <div className="border border-slate-200 rounded-xl p-4 bg-white space-y-2">
+              <span className="block text-[9.5px] font-bold text-slate-800 uppercase tracking-wider font-sans">
+                Time-Phased Spend Drawdowns (Monthly Actual Spend vs Cumulative Budget Curve)
+              </span>
+
+              <div className="w-full flex justify-center">
+                <svg viewBox="0 0 800 240" className="w-full h-auto text-slate-705 bg-white">
+                  {/* Left Axis: Monthly Cash ticks and grid */}
+                  {[0, 25, 50, 75, 100].map((tick) => {
+                    const y = 30 + (100 - tick) * 160 / 100;
+                    const cashVal = Math.round(tick * maxMonthlyCash / 100);
+                    const cumVal = Math.round(tick * maxCumulativeCash / 100);
+                    return (
+                      <g key={`print-cash-grid-${tick}`}>
+                        <line x1="55" y1={y} x2="735" y2={y} stroke="#E2E8F0" strokeWidth="1" strokeDasharray="1 3" />
+                        {/* Monthly label (Left Axis) */}
+                        <text x="43" y={y + 3} textAnchor="end" className="text-[8px] font-mono fill-blue-800 font-semibold">${cashVal.toLocaleString()}k</text>
+                        {/* Cumulative label (Right Axis) */}
+                        <text x="747" y={y + 3} textAnchor="start" className="text-[8px] font-mono fill-indigo-600 font-semibold">${cumVal.toLocaleString()}k</text>
+                      </g>
+                    );
+                  })}
+
+                  {/* Draw Monthly drawdowns as bars */}
+                  {timelineData.map((pt, idx) => {
+                    const xCenter = 55 + idx * 680 / (timelineData.length - 1);
+                    const isCamp = config.chartsScope === 'campaign';
+                    const barWidth = isCamp ? 3 : 7;
+                    
+                    // Monthly Plan Bar
+                    const planHeight = pt.targetCashFlow * 160 / maxMonthlyCash;
+                    const planY = 30 + 160 - planHeight;
+                    // Monthly Actual Bar
+                    const actHeight = pt.actualCashFlow !== null ? pt.actualCashFlow * 160 / maxMonthlyCash : 0;
+                    const actY = 30 + 160 - actHeight;
+
+                    const showLabel = !isCamp ? (idx % 2 === 0 || idx === 11) : (idx % 6 === 0 || idx === timelineData.length - 1);
+
+                    return (
+                      <g key={`print-bar-${idx}`}>
+                        {/* Target Monthly Bar */}
+                        <rect
+                          x={xCenter - barWidth - 1}
+                          y={planY}
+                          width={barWidth}
+                          height={planHeight}
+                          fill="#DBEAFE"
+                          stroke="#3B82F6"
+                          strokeWidth="0.5"
+                          rx="0.5"
+                        />
+
+                        {/* Actual Monthly Bar */}
+                        {pt.actualCashFlow !== null && (
+                          <rect
+                            x={xCenter + 1}
+                            y={actY}
+                            width={barWidth}
+                            height={actHeight}
+                            fill="#FFEDD5"
+                            stroke="#F97316"
+                            strokeWidth="0.5"
+                            rx="0.5"
+                          />
+                        )}
+
+                        {/* Axis X Month Marker Label */}
+                        {showLabel && (
+                          <text x={xCenter} y="206" textAnchor="middle" className="text-[8.5px] font-bold fill-slate-600 font-mono">{pt.label}</text>
+                        )}
+                      </g>
+                    );
+                  })}
+
+                  {/* Cumulative Planned Cost Line (Overlay Indigo) */}
+                  <path
+                    d={timelineData.map((p, i) => `${i === 0 ? 'M' : 'L'} ${55 + i * 680 / (timelineData.length - 1)} ${30 + (maxCumulativeCash - cumulativeCashList[i].cumTarget) * 160 / maxCumulativeCash}`).join(' ')}
+                    fill="none"
+                    stroke="#4F46E5"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+
+                  {/* Cumulative Actual Cost Line (Overlay Rose Red) */}
+                  {timelineData.filter(p => p.actualCashFlow !== null).length > 0 && (
+                    <path
+                      d={timelineData.filter(p => p.actualCashFlow !== null).map((p, i) => `${i === 0 ? 'M' : 'L'} ${55 + i * 680 / (timelineData.length - 1)} ${30 + (maxCumulativeCash - cumulativeCashList[i].cumActual!) * 160 / maxCumulativeCash}`).join(' ')}
+                      fill="none"
+                      stroke="#E11D48"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  )}
+
+                  {/* Legend Inside Double-Axis Cash Flow Chart */}
+                  <rect x="60" y="35" width="480" height="22" fill="#F8FAFC" rx="4" stroke="#E2E8F0" strokeWidth="1" />
+                  <g transform="translate(70, 41)">
+                    <rect x="0" y="1" width="10" height="7" fill="#DBEAFE" stroke="#3B82F6" strokeWidth="0.5" rx="0.5" />
+                    <text x="14" y="8" className="text-[8.5px] font-sans fill-slate-705 font-bold">Planned Monthly Drawdown</text>
+
+                    <rect x="150" y="1" width="10" height="7" fill="#FFEDD5" stroke="#F97316" strokeWidth="0.5" rx="0.5" />
+                    <text x="164" y="8" className="text-[8.5px] font-sans fill-slate-705 font-bold">Actual Monthly Drawdown</text>
+
+                    <circle cx="295" cy="5" r="3.5" fill="#4F46E5" />
+                    <text x="303" y="8" className="text-[8.5px] font-sans fill-slate-705 font-bold">Cumulative Planned Baseline</text>
+
+                    <circle cx="430" cy="5" r="3.5" fill="#E11D48" />
+                    <text x="438" y="8" className="text-[8.5px] font-sans fill-slate-705 font-bold">Cumulative Actual Cost</text>
+                  </g>
+                </svg>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -554,24 +939,24 @@ export default function PrintReportView({ project, config, orientation }: PrintR
             <div className="grid grid-cols-2 gap-8 pt-4">
               <div className="space-y-4">
                 <div className="border-b border-slate-300 pb-2">
-                  <span className="block text-[8px] text-slate-400 font-mono">SIGNATURE / APPROVING AUTHORITY</span>
+                  <span className="block text-[8px] text-slate-400 font-mono text-slate-500 font-bold">PREPARED BY / REVIEWING AUTHORITY</span>
                   <div className="h-6" /> {/* Spacer for physical signature */}
                 </div>
                 <div className="text-[9.5px]">
-                  <p className="font-bold text-slate-850">Operations Director</p>
-                  <p className="text-slate-500">Drilling Division, MLN Operations</p>
+                  <p className="font-bold text-slate-900">Drilling Project Control</p>
+                  <p className="text-slate-500">Drilling MLN Phase 5 Project</p>
                   <p className="text-[8.5px] text-slate-400 mt-1">Date: ________________________</p>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div className="border-b border-slate-300 pb-2">
-                  <span className="block text-[8px] text-slate-400 font-mono">SIGNATURE / REVIEWING AUTHORITY</span>
+                  <span className="block text-[8px] text-slate-400 font-mono text-slate-500 font-bold">APPROVED BY / APPROVING AUTHORITY</span>
                   <div className="h-6" /> {/* Spacer for physical signature */}
                 </div>
                 <div className="text-[9.5px]">
-                  <p className="font-bold text-slate-850">Head of Project Controls</p>
-                  <p className="text-slate-500">Commercial & Drilling Finance Dept.</p>
+                  <p className="font-bold text-slate-900">Drilling Manager</p>
+                  <p className="text-slate-500">Drilling MLN Phase 5 Project</p>
                   <p className="text-[8.5px] text-slate-400 mt-1">Date: ________________________</p>
                 </div>
               </div>
