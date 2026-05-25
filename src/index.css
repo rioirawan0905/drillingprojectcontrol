@@ -33,58 +33,193 @@
 
 /* Print Specific Rules for High Fidelity PDF generation */
 @media print {
-  /* Completely hide control sliders, buttons, selectors, tabs, search forms, sidebars */
+  /* Set standard landscape page size with proper margins for the 12-month data grid and timelines */
+  @page {
+    size: landscape;
+    margin: 8mm 12mm 8mm 12mm;
+  }
+
+  /* Completely hide control sliders, buttons, selectors, tabs, search forms, and sidebars */
   #sim-sidebar-controls,
   #alert-hud-marquee,
   #header-action-rails,
   .no-print,
   button,
   form,
-  input,
-  select,
-  iframe {
+  iframe,
+  input[type="file"] {
     display: none !important;
   }
 
-  /* Optimize layout for full-width print canvas */
+  /* Optimize layout for full-width landscape print canvas */
   body {
     background: #ffffff !important;
-    color: #0d1e2d !important;
+    color: #0f172a !important;
     padding: 0 !important;
     margin: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
-  /* Force grid containers to stack vertically cleanly */
+  header {
+    margin-bottom: 0.5rem !important;
+    box-shadow: none !important;
+    border-bottom: 2px solid #0f172a !important;
+    padding-top: 0 !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  header h1 {
+    color: #0d1e2d !important;
+  }
+
+  /* Force grid containers to flow or stack beautifully in landscape pages */
   #main-content-layout {
     display: flex !important;
     flex-direction: column !important;
-    gap: 1.5rem !important;
+    gap: 1.25rem !important;
+    width: 100% !important;
   }
 
+  /* Ensure rows don't awkwardly break in the middle of structured cards */
+  #executive-charts-panel,
+  #ai-controls-advisory-panel,
+  #spreadsheet-ledger-container,
+  #wbs-cost-chart-panel,
+  #formula-glossary-panel,
+  .kpi-cards-grid-row,
+  .kpi-card-item {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    margin-bottom: 1rem !important;
+  }
+
+  /* Neutralize dark mode styles for paper-friendly high-contrast printing */
+  .bg-white,
+  .bg-slate-50,
+  .bg-slate-900,
+  .bg-slate-950,
+  .bg-slate-900\/60,
+  #ai-controls-advisory-panel,
+  #ai-controls-advisory-panel * {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+  }
+
+  /* Add fine borders to panels to retain structure on white paper */
+  #executive-charts-panel,
+  #ai-controls-advisory-panel,
+  #spreadsheet-ledger-container,
+  #wbs-cost-chart-panel,
+  #formula-glossary-panel,
+  .kpi-card-item {
+    border: 1px solid #94a3b8 !important;
+    border-radius: 8px !important;
+  }
+
+  /* Reset layout grids */
   .col-span-1, .col-span-2, .col-span-3, .col-span-4, .col-span-5, .col-span-6, .col-span-7, .col-span-8, .col-span-12 {
     width: 100% !important;
     max-width: 100% !important;
     flex: 1 1 100% !important;
   }
 
-  /* Neutralize card shadows and render high contrast borders */
-  .bg-white, .bg-slate-50, .bg-slate-900 {
-    background: #ffffff !important;
-    color: #0f172a !important;
-    border: 1px solid #cbd5e1 !important;
-    box-shadow: none !important;
+  /* Fix absolute positioning of tooltip popovers or indicators so they don't block contents */
+  [style*="position: absolute"] {
+    display: none !important;
   }
 
-  /* SVG line graphs printing optimizations */
+  /* SVG line graphs and bar-charts print optimization */
   svg {
     border-radius: 0 !important;
     background: transparent !important;
-    max-height: 230px !important;
+    max-height: 210px !important;
+    width: 100% !important;
+    border: none !important;
   }
 
-  /* High contrast colors for lines and bars */
-  circle, path {
+  /* Guarantee colorful line graph visual clarity under print-adjust */
+  circle, path, rect {
     print-color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
+  }
+
+  /* TIGHT SPREADSHEET LAYOUT: Fit all 12 columns perfectly without scrolling */
+  .overflow-x-auto {
+    overflow-x: visible !important;
+    overflow: visible !important;
+  }
+
+  table {
+    min-width: 100% !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+  }
+
+  th, td {
+    padding: 4px 2px !important;
+    border: 1px solid #cbd5e1 !important;
+    font-size: 8.5px !important;
+  }
+
+  /* Completely remove CSS stickiness which renders duplicate rows and overlapping headers on physical pages */
+  .sticky {
+    position: static !important;
+    background: transparent !important;
+  }
+
+  /* Replace spreadsheet inputs with high-contrast, borderless text display rules */
+  input {
+    border: none !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    color: #0f172a !important;
+    font-weight: bold !important;
+    font-size: 9px !important;
+    text-align: center !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* Chrome/Safari up-down arrow hides */
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  /* Firefox arrow hides */
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+
+  /* Adjust priority highlighted color metrics on black-and-white print adjustments */
+  .text-emerald-400, .text-emerald-300, .text-emerald-500, .text-emerald-600, .text-emerald-700, .text-emerald-800 {
+    color: #15803d !important; /* Bold solid printable green */
+    background: transparent !important;
+  }
+
+  .text-rose-400, .text-rose-300, .text-rose-500, .text-rose-600, .text-rose-700, .text-red-500, .text-red-600 {
+    color: #b91c1c !important; /* Bold solid printable red */
+    background: transparent !important;
+  }
+
+  .text-blue-400, .text-blue-500, .text-blue-600, .text-blue-700, .text-blue-800 {
+    color: #1d4ed8 !important; /* Bold solid printable blue */
+    background: transparent !important;
+  }
+
+  .text-slate-400, .text-slate-500, .text-slate-600 {
+    color: #475569 !important; /* High contrast grays */
+  }
+
+  /* Subtitles and text descriptions sizes */
+  p, span {
+    font-size: 10px !important;
   }
 }

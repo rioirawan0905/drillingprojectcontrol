@@ -283,8 +283,31 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans select-none pb-12">
+      {/* Print-Only Professional Document Header (Hidden during standard screen viewing) */}
+      <div className="hidden print:block border-b-2 border-slate-900 pb-3.5 mb-5 mx-6 mt-4">
+        <div className="flex justify-between items-start">
+          <div>
+            <span className="text-[9px] font-mono font-black tracking-widest uppercase bg-slate-900 text-white px-2 py-0.5 rounded-xs">
+              OFFICIAL ENGINEERING PROJECT SIMULATION LEDGER
+            </span>
+            <h1 className="text-xl font-black text-slate-950 tracking-tight mt-1 leading-none uppercase">
+              {currentProject.name} Project Controls Report
+            </h1>
+            <p className="text-xs text-slate-500 font-mono mt-1">
+              Phase 5 S-Curve Analytics & Earned Value Management (EVM) Suite • Algerian Sahara
+            </p>
+          </div>
+          <div className="text-right text-[10px] text-slate-500 font-mono leading-tight bg-slate-50 border border-slate-200 rounded-lg p-2.5">
+            <div><strong>Report Created:</strong> {new Date().toISOString().split('T')[0]}</div>
+            <div><strong>Nominal Plan Year:</strong> {currentProject.year}</div>
+            <div><strong>Active Reporting Cutoff Month:</strong> M{currentProject.reportingMonth}</div>
+            <div className="font-bold text-red-600 mt-0.5">CLASSIFICATION: CO-PILOT INTEGRITY VERIFIED</div>
+          </div>
+        </div>
+      </div>
+
       {/* Top Professional Header Bar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 px-6 py-3.5 shadow-xs">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 px-6 py-3.5 shadow-xs print:hidden">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
           <div className="flex items-center gap-3">
             <div className="bg-slate-900 text-white p-2.5 rounded-xl shadow-sm">
