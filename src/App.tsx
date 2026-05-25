@@ -14,7 +14,8 @@ import WBSCostChart from './components/WBSCostChart';
 import AICopilotTerminal from './components/AICopilotTerminal';
 import AlertSystem from './components/AlertSystem';
 import FormulaGlossary from './components/FormulaGlossary';
-import { Compass, CalendarDays, FileSpreadsheet, Download, FileText, Check, Upload } from 'lucide-react';
+import PrintReportView from './components/PrintReportView';
+import { Compass, CalendarDays, FileSpreadsheet, Download, FileText, Check, Upload, Settings, X, Printer, Layout, Palette } from 'lucide-react';
 
 const normalizeProjectData = (project: ProjectYearData): ProjectYearData => {
   const C = project.reportingMonth;
@@ -57,6 +58,22 @@ export default function App() {
   });
 
   const [highlightedAbbr, setHighlightedAbbr] = useState<string | null>(null);
+
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [printOrientation, setPrintOrientation] = useState<'portrait' | 'landscape'>('landscape');
+  const [printConfig, setPrintConfig] = useState({
+    title: "Drilling MLN Phase 5 Project Controls Summary",
+    subtitle: "Earned Value Management (EVM) & S-Curve Analytical Report",
+    preparedBy: "Project Controls Dept.",
+    classification: "CONFIDENTIAL / INTERNAL USE ONLY",
+    includeCoverPage: true,
+    includeKPIs: true,
+    includeLedger: true,
+    includeWBS: true,
+    includeAdvisory: true,
+    includeSignOff: true,
+    colorTheme: 'executive' as 'executive' | 'slate' | 'emerald' | 'monochrome'
+  });
 
   useEffect(() => {
     localStorage.setItem('mln_drilling_projects_sim', JSON.stringify(projects));
@@ -278,36 +295,13 @@ export default function App() {
   };
 
   const handleExportPDF = () => {
-    window.print();
+    setIsPrintModalOpen(true);
   };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans select-none pb-12">
-      {/* Print-Only Professional Document Header (Hidden during standard screen viewing) */}
-      <div className="hidden print:block border-b-2 border-slate-900 pb-3.5 mb-5 mx-6 mt-4">
-        <div className="flex justify-between items-start">
-          <div>
-            <span className="text-[9px] font-mono font-black tracking-widest uppercase bg-slate-900 text-white px-2 py-0.5 rounded-xs">
-              OFFICIAL ENGINEERING PROJECT SIMULATION LEDGER
-            </span>
-            <h1 className="text-xl font-black text-slate-950 tracking-tight mt-1 leading-none uppercase">
-              {currentProject.name} Project Controls Report
-            </h1>
-            <p className="text-xs text-slate-500 font-mono mt-1">
-              Phase 5 S-Curve Analytics & Earned Value Management (EVM) Suite • Algerian Sahara
-            </p>
-          </div>
-          <div className="text-right text-[10px] text-slate-500 font-mono leading-tight bg-slate-50 border border-slate-200 rounded-lg p-2.5">
-            <div><strong>Report Created:</strong> {new Date().toISOString().split('T')[0]}</div>
-            <div><strong>Nominal Plan Year:</strong> {currentProject.year}</div>
-            <div><strong>Active Reporting Cutoff Month:</strong> M{currentProject.reportingMonth}</div>
-            <div className="font-bold text-red-600 mt-0.5">CLASSIFICATION: CO-PILOT INTEGRITY VERIFIED</div>
-          </div>
-        </div>
-      </div>
-
       {/* Top Professional Header Bar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 px-6 py-3.5 shadow-xs print:hidden">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 px-6 py-3.5 shadow-xs">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
           <div className="flex items-center gap-3">
             <div className="bg-slate-900 text-white p-2.5 rounded-xl shadow-sm">
@@ -431,6 +425,208 @@ export default function App() {
           </div>
         </div>
       </main>
+
+      {/* Print dynamic orientation injection */}
+      <style>{`
+        @media print {
+          @page { 
+            size: ${printOrientation}; 
+            margin: 15mm 15mm 15mm 15mm; 
+          }
+        }
+      `}</style>
+
+      {/* Dedicate print-only component rendered on-demand */}
+      <PrintReportView
+        project={currentProject}
+        config={printConfig}
+        orientation={printOrientation}
+      />
+
+      {/* PRINT CONFIGURATOR modal/dialog */}
+      {isPrintModalOpen && (
+        <div id="print-configurator-modal" className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[100] p-4 select-text">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden animate-fade-in flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="bg-slate-900 text-white p-5 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-2.5">
+                <Printer className="w-5 h-5 text-blue-400" />
+                <div>
+                  <h3 className="font-extrabold text-sm uppercase tracking-wide">Professional Management PDF Configurator</h3>
+                  <p className="text-[11px] text-slate-400">Tailored Earned Value Report for Operations & Execs</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsPrintModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content Body */}
+            <div className="p-6 overflow-y-auto space-y-5 custom-scrollbar flex-1 text-slate-850">
+              {/* Orientation Option */}
+              <div>
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-2 font-mono">1. Report Page Orientation</span>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => setPrintOrientation('portrait')}
+                    className={`flex items-center gap-3 p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer ${printOrientation === 'portrait' ? 'border-slate-800 bg-slate-50' : 'border-slate-150 hover:border-slate-350'}`}
+                  >
+                    <div className="w-5 h-7 border border-slate-400 rounded bg-white flex items-center justify-center shrink-0 shadow-3xs">
+                      <div className="w-3.5 h-0.5 bg-slate-300" />
+                    </div>
+                    <div>
+                      <span className="block font-black text-xs text-slate-900 font-sans">Portrait Orientation</span>
+                      <span className="text-[10px] text-slate-450 block">Best for standard vertical, clean tables, & summaries</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setPrintOrientation('landscape')}
+                    className={`flex items-center gap-3 p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer ${printOrientation === 'landscape' ? 'border-slate-800 bg-slate-50' : 'border-slate-150 hover:border-slate-350'}`}
+                  >
+                    <div className="w-7 h-5 border border-slate-400 rounded bg-white flex items-center justify-center shrink-0 shadow-3xs">
+                      <div className="w-5 h-0.5 bg-slate-300" />
+                    </div>
+                    <div>
+                      <span className="block font-black text-xs text-slate-900 font-sans">Landscape Orientation</span>
+                      <span className="text-[10px] text-slate-450 block">Excellent for broad S-Curve chronological data grids</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Theme Settings Selection */}
+              <div>
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-2 font-mono">2. Executive Visual Style Theme</span>
+                <div className="grid grid-cols-4 gap-2.5">
+                  {[
+                    { id: 'executive', name: 'Navy Corporate', color: 'bg-blue-800' },
+                    { id: 'slate', name: 'Charcoal Minimal', color: 'bg-slate-700' },
+                    { id: 'emerald', name: 'Operations Green', color: 'bg-emerald-800' },
+                    { id: 'monochrome', name: 'High-Contrast B&W', color: 'bg-black' }
+                  ].map((theme) => (
+                    <button
+                      key={theme.id}
+                      type="button"
+                      onClick={() => setPrintConfig(prev => ({ ...prev, colorTheme: theme.id as any }))}
+                      className={`flex flex-col items-center p-2.5 border rounded-xl hover:bg-slate-50 transition-all text-center cursor-pointer ${printConfig.colorTheme === theme.id ? 'border-slate-800 ring-2 ring-slate-800/20' : 'border-slate-150'}`}
+                    >
+                      <div className={`w-5 h-5 rounded-full ${theme.color} mb-1.5`} />
+                      <span className="text-[9.5px] font-bold text-slate-800 tracking-tight leading-none block">{theme.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Editable Report Metadata Form */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-4 col-span-1 md:col-span-2 select-text">
+                <div className="col-span-1 md:col-span-2">
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-550 mb-0.5 font-mono">3. Document Metadata</span>
+                </div>
+                <div>
+                  <label className="block text-[9px] font-semibold text-slate-500 uppercase mb-1">Report Master Title</label>
+                  <input
+                    type="text"
+                    value={printConfig.title}
+                    onChange={(e) => setPrintConfig(prev => ({ ...prev, title: e.target.value }))}
+                    className="w-full text-xs border border-slate-200 rounded-lg p-2 bg-white focus:outline-none focus:ring-2 focus:ring-slate-850 text-slate-800 font-medium"
+                    placeholder="E.g. Drilling Report"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-semibold text-slate-500 uppercase mb-1">Subtitle / Purpose</label>
+                  <input
+                    type="text"
+                    value={printConfig.subtitle}
+                    onChange={(e) => setPrintConfig(prev => ({ ...prev, subtitle: e.target.value }))}
+                    className="w-full text-xs border border-slate-200 rounded-lg p-2 bg-white focus:outline-none focus:ring-2 focus:ring-slate-850 text-slate-805 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-semibold text-slate-505 uppercase mb-1">Prepared By (Authority)</label>
+                  <input
+                    type="text"
+                    value={printConfig.preparedBy}
+                    onChange={(e) => setPrintConfig(prev => ({ ...prev, preparedBy: e.target.value }))}
+                    className="w-full text-xs border border-slate-200 rounded-lg p-2 bg-white focus:outline-none focus:ring-2 focus:ring-slate-850 text-slate-800 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-semibold text-slate-505 uppercase mb-1">Control Classification</label>
+                  <input
+                    type="text"
+                    value={printConfig.classification}
+                    onChange={(e) => setPrintConfig(prev => ({ ...prev, classification: e.target.value }))}
+                    className="w-full text-xs border border-slate-200 rounded-lg p-2 bg-white focus:outline-none focus:ring-2 focus:ring-slate-850 text-slate-800 font-medium font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Toggles for Section Inclusions */}
+              <div>
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-2.5 font-mono">4. Select Sections to Include in Report</span>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {[
+                    { key: 'includeCoverPage', label: 'Formal Cover Page' },
+                    { key: 'includeKPIs', label: 'EVM KPI Brief Panel' },
+                    { key: 'includeLedger', label: '12-Month S-Curve Matrix' },
+                    { key: 'includeWBS', label: 'WBS Cost Centers health' },
+                    { key: 'includeAdvisory', label: 'AI Risk Advisory Memo' },
+                    { key: 'includeSignOff', label: 'Acceptance Sign-Off Block' },
+                  ].map((sec) => {
+                    const active = (printConfig as any)[sec.key];
+                    return (
+                      <button
+                        key={sec.key}
+                        type="button"
+                        onClick={() => setPrintConfig(prev => ({ ...prev, [sec.key]: !active }))}
+                        className={`flex items-center gap-2.5 p-2 rounded-lg border transition-all text-left cursor-pointer ${active ? 'border-slate-855 bg-slate-50/50' : 'border-slate-150 text-slate-400'}`}
+                      >
+                        <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all shrink-0 ${active ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white'}`}>
+                          {active && <Check className="w-3 h-3 text-white stroke-[3.5px]" />}
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-850 leading-none">{sec.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-150 flex justify-between items-center shrink-0">
+              <span className="text-[10px] text-slate-450 font-mono tracking-wide">
+                Configured: {printOrientation.toUpperCase()} size page margin ready
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsPrintModalOpen(false)}
+                  className="text-xs font-bold text-slate-500 hover:text-slate-808 border border-slate-200 hover:border-slate-350 px-4 py-2 rounded-lg transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPrintModalOpen(false);
+                    setTimeout(() => {
+                      window.print();
+                    }, 180);
+                  }}
+                  className="text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 px-5 py-2 rounded-lg shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5 text-blue-400" />
+                  Print / Save PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
