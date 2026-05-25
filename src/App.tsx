@@ -70,6 +70,7 @@ export default function App() {
     includeKPIs: true,
     includeCharts: true,
     chartsScope: 'year' as 'year' | 'campaign',
+    showDataLabels: true,
     includeLedger: true,
     includeWBS: true,
     includeAdvisory: true,
@@ -580,26 +581,43 @@ export default function App() {
                     {printConfig.includeCharts ? '✓ Graphs Included' : '✖ Graphs Excluded'}
                   </button>
                 </div>
-                
                 {printConfig.includeCharts && (
-                  <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => setPrintConfig(prev => ({ ...prev, chartsScope: 'year' }))}
-                      className={`flex flex-col p-2.5 border rounded-lg text-left transition-all cursor-pointer ${printConfig.chartsScope === 'year' ? 'border-blue-600 bg-white ring-2 ring-blue-600/10' : 'border-slate-200 hover:bg-white bg-slate-50/20'}`}
-                    >
-                      <span className="text-[10px] font-bold text-slate-850 leading-none">Selected Year ({selectedYear})</span>
-                      <span className="text-[9px] text-slate-455 mt-1 block leading-tight">Plots S-Curve and expenditure drawdown specifically for the single selected fiscal timeline.</span>
-                    </button>
+                  <div className="col-span-1 md:col-span-2 space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setPrintConfig(prev => ({ ...prev, chartsScope: 'year' }))}
+                        className={`flex flex-col p-2.5 border rounded-lg text-left transition-all cursor-pointer ${printConfig.chartsScope === 'year' ? 'border-blue-600 bg-white ring-2 ring-blue-600/10' : 'border-slate-200 hover:bg-white bg-slate-50/20'}`}
+                      >
+                        <span className="text-[10px] font-bold text-slate-850 leading-none">Selected Year ({selectedYear})</span>
+                        <span className="text-[9px] text-slate-455 mt-1 block leading-tight">Plots S-Curve and expenditure drawdown specifically for the single selected fiscal timeline.</span>
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setPrintConfig(prev => ({ ...prev, chartsScope: 'campaign' }))}
-                      className={`flex flex-col p-2.5 border rounded-lg text-left transition-all cursor-pointer ${printConfig.chartsScope === 'campaign' ? 'border-blue-600 bg-white ring-2 ring-blue-600/10' : 'border-slate-200 hover:bg-white bg-slate-50/20'}`}
-                    >
-                      <span className="text-[10px] font-bold text-slate-855 leading-none">Full Campaign (2025-2028)</span>
-                      <span className="text-[9px] text-slate-455 mt-1 block leading-tight">Amalgamates data across all four physical wells to graph the complete master project milestone trajectory.</span>
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => setPrintConfig(prev => ({ ...prev, chartsScope: 'campaign' }))}
+                        className={`flex flex-col p-2.5 border rounded-lg text-left transition-all cursor-pointer ${printConfig.chartsScope === 'campaign' ? 'border-blue-600 bg-white ring-2 ring-blue-600/10' : 'border-slate-200 hover:bg-white bg-slate-50/20'}`}
+                      >
+                        <span className="text-[10px] font-bold text-slate-855 leading-none">Full Campaign (2025-2028)</span>
+                        <span className="text-[9px] text-slate-455 mt-1 block leading-tight">Amalgamates data across all four physical wells to graph the complete master project milestone trajectory.</span>
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 p-2 bg-white/70 rounded-lg border border-blue-100 hover:bg-white transition-all">
+                      <button
+                        type="button"
+                        onClick={() => setPrintConfig(prev => ({ ...prev, showDataLabels: !prev.showDataLabels }))}
+                        className="flex items-center gap-2.5 text-left cursor-pointer w-full"
+                      >
+                        <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all shrink-0 ${printConfig.showDataLabels ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300 bg-white'}`}>
+                          {printConfig.showDataLabels && <Check className="w-3 h-3 text-white stroke-[3.5px]" />}
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-850 leading-none block">Display Data Labels on S-Curves</span>
+                          <span className="text-[9px] text-slate-455 mt-1 block">Renders exact percentages over plotting coordinate bubbles for direct auditing</span>
+                        </div>
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

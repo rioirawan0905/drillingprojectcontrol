@@ -18,6 +18,7 @@ interface PrintReportViewProps {
     includeKPIs: boolean;
     includeCharts?: boolean;
     chartsScope?: 'year' | 'campaign';
+    showDataLabels?: boolean;
     includeLedger: boolean;
     includeWBS: boolean;
     includeAdvisory: boolean;
@@ -549,6 +550,75 @@ export default function PrintReportView({ project, allProjects, config, orientat
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
+                  )}
+
+                  {/* S-Curve Interactive/Data labels overlay */}
+                  {config.showDataLabels && (
+                    <g id="print-s-curve-data-labels">
+                      {timelineData.map((pt, idx) => {
+                        const isCamp = config.chartsScope === 'campaign';
+                        // To keep it clean and prevent overlap, we display all months in single-year, or every 3rd month on Campaign level.
+                        const isLabeledStep = !isCamp ? true : (idx % 3 === 0 || idx === timelineData.length - 1);
+                        if (!isLabeledStep) return null;
+
+                        const x = 50 + idx * 690 / (timelineData.length - 1);
+                        const yTarget = 30 + (100 - pt.targetCumulativeProgress) * 160 / 100;
+                        const yActual = pt.actualCumulativeProgress !== null 
+                          ? 30 + (100 - pt.actualCumulativeProgress) * 160 / 100 
+                          : null;
+                        const yRecovery = pt.recoveryCumulativeProgress !== null 
+                          ? 30 + (100 - pt.recoveryCumulativeProgress) * 160 / 100 
+                          : null;
+
+                        return (
+                          <g key={`print-data-lbl-${idx}`}>
+                            {/* 1. Planned Target Node & Text */}
+                            <circle cx={x} cy={yTarget} r={isCamp ? "2.5" : "3.5"} fill="#2563EB" stroke="#FFFFFF" strokeWidth="1" />
+                            <text
+                              x={x}
+                              y={yTarget - 7}
+                              textAnchor="middle"
+                              className="text-[8px] font-mono fill-blue-800 font-extrabold"
+                              style={{ paintOrder: 'stroke', stroke: '#FFFFFF', strokeWidth: 2, strokeLinejoin: 'round' }}
+                            >
+                              {pt.targetCumulativeProgress}%
+                            </text>
+
+                            {/* 2. Earned Actual Node & Text */}
+                            {yActual !== null && (
+                              <g>
+                                <circle cx={x} cy={yActual} r={isCamp ? "3" : "4.5"} fill="#F97316" stroke="#FFFFFF" strokeWidth="1.2" />
+                                <text
+                                  x={x}
+                                  y={yActual + 12}
+                                  textAnchor="middle"
+                                  className="text-[8.5px] font-mono fill-orange-700 font-black"
+                                  style={{ paintOrder: 'stroke', stroke: '#FFFFFF', strokeWidth: 2.5, strokeLinejoin: 'round' }}
+                                >
+                                  {pt.actualCumulativeProgress}%
+                                </text>
+                              </g>
+                            )}
+
+                            {/* 3. Recovery Path Node & Text */}
+                            {yRecovery !== null && pt.recoveryCumulativeProgress !== pt.actualCumulativeProgress && (
+                              <g>
+                                <circle cx={x} cy={yRecovery} r={isCamp ? "2.5" : "3.5"} fill="#10B981" stroke="#FFFFFF" strokeWidth="1" />
+                                <text
+                                  x={x}
+                                  y={yRecovery - 7}
+                                  textAnchor="middle"
+                                  className="text-[8px] font-mono fill-emerald-800 font-extrabold"
+                                  style={{ paintOrder: 'stroke', stroke: '#FFFFFF', strokeWidth: 2, strokeLinejoin: 'round' }}
+                                >
+                                  {pt.recoveryCumulativeProgress}%
+                                </text>
+                              </g>
+                            )}
+                          </g>
+                        );
+                      })}
+                    </g>
                   )}
 
                   {/* S-Curve Labels / Legend HUD Inside SVG */}
