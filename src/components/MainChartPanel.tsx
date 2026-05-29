@@ -23,7 +23,6 @@ export default function MainChartPanel({ project, allProjects, onUpdateProject }
   const [activeTab, setActiveTab] = useState<'scurve' | 'cashflow'>('scurve');
   const [isMultiYear, setIsMultiYear] = useState<boolean>(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const [showDataLabels, setShowDataLabels] = useState<boolean>(true);
 
   const selectedYear = project.year;
   const C = project.reportingMonth;
@@ -405,23 +404,6 @@ export default function MainChartPanel({ project, allProjects, onUpdateProject }
               {isMultiYear ? 'Campaign Level (2025-2028)' : 'Year Level View'}
             </button>
           </div>
-
-          {/* S-curve Data Labels Toggle */}
-          {activeTab === 'scurve' && (
-            <div className="border-l border-slate-200 pl-2">
-              <button
-                onClick={() => setShowDataLabels(!showDataLabels)}
-                className={`px-3 py-2 text-xs font-bold rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer ${
-                  showDataLabels 
-                    ? 'bg-emerald-50 text-emerald-800 border-emerald-250 font-extrabold shadow-3xs' 
-                    : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 font-medium'
-                }`}
-                title="Toggle displaying exact physical percentages directly above/below the plotting node bubbles"
-              >
-                <span>{showDataLabels ? '✓ Labels Active' : 'Show Labels'}</span>
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -693,66 +675,6 @@ export default function MainChartPanel({ project, allProjects, onUpdateProject }
                     />
                   );
                 })}
-
-                {/* S-curve Data Labels Overlay */}
-                {showDataLabels && (
-                  <g id="screen-s-curve-data-labels" className="pointer-events-none">
-                    {/* 1. Target Progress labels */}
-                    {targetSPoints.map((p) => {
-                      const showStep = !isMultiYear ? true : (p.idx % 3 === 0 || p.idx === totalPoints - 1);
-                      if (!showStep) return null;
-                      return (
-                        <text
-                          key={`t-lbl-${p.idx}`}
-                          x={p.x}
-                          y={p.y - 7}
-                          textAnchor="middle"
-                          className="text-[8px] font-mono fill-blue-800 font-extrabold"
-                          style={{ paintOrder: 'stroke', stroke: '#FFFFFF', strokeWidth: 2.5, strokeLinejoin: 'round' }}
-                        >
-                          {p.val.toFixed(0)}%
-                        </text>
-                      );
-                    })}
-
-                    {/* 2. Actual Progress labels */}
-                    {actualSPoints.map((p) => {
-                      const showStep = !isMultiYear ? true : (p.idx % 3 === 0 || p.idx === totalPoints - 1);
-                      if (!showStep) return null;
-                      return (
-                        <text
-                          key={`a-lbl-${p.idx}`}
-                          x={p.x}
-                          y={p.y + 12}
-                          textAnchor="middle"
-                          className="text-[8.5px] font-mono fill-orange-700 font-black animate-none"
-                          style={{ paintOrder: 'stroke', stroke: '#FFFFFF', strokeWidth: 3, strokeLinejoin: 'round' }}
-                        >
-                          {p.val.toFixed(0)}%
-                        </text>
-                      );
-                    })}
-
-                    {/* 3. Recovery Progress labels */}
-                    {recoverySPoints.map((p) => {
-                      // Only show recovery label if it is in future or it is spaced
-                      const showStep = !isMultiYear ? (p.idx > activeCutoffIndex) : (p.idx > activeCutoffIndex && p.idx % 3 === 0);
-                      if (!showStep) return null;
-                      return (
-                        <text
-                          key={`r-lbl-${p.idx}`}
-                          x={p.x}
-                          y={p.y - 7}
-                          textAnchor="middle"
-                          className="text-[8px] font-mono fill-emerald-800 font-extrabold"
-                          style={{ paintOrder: 'stroke', stroke: '#FFFFFF', strokeWidth: 2.5, strokeLinejoin: 'round' }}
-                        >
-                          {p.val.toFixed(0)}%
-                        </text>
-                      );
-                    })}
-                  </g>
-                )}
               </>
             )}
 
