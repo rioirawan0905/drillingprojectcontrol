@@ -23,6 +23,7 @@ export default function MainChartPanel({ project, allProjects, onUpdateProject }
   const [activeTab, setActiveTab] = useState<'scurve' | 'cashflow'>('scurve');
   const [isMultiYear, setIsMultiYear] = useState<boolean>(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [showForecast, setShowForecast] = useState<boolean>(false);
 
   const selectedYear = project.year;
   const C = project.reportingMonth;
@@ -197,6 +198,64 @@ export default function MainChartPanel({ project, allProjects, onUpdateProject }
   const activeDataset = isMultiYear ? multiYearTimelineData : currentYearMonthlyData;
   const totalPoints = activeDataset.length;
 
+  // --- LINEAR REGRESSION CALCULATIONS ---
+  const validActualPoints = activeDataset
+    .map((pt, idx) => ({ x: idx, y: pt.actualCumulativeProgress }))
+    .filter(p => p.y !== null) as Array<{ x: number; y: number }>;
+
+  let m = 0;
+  let c = 0;
+
+  if (validActualPoints.length >= 2) {
+    const n = validActualPoints.length;
+    let sumX = 0;
+    let sumY = 0;
+    let sumXY = 0;
+    let sumXX = 0;
+    for (let i = 0; i < n; i++) {
+      sumX += validActualPoints[i].x;
+      sumY += validActualPoints[i].y;
+      sumXY += validActualPoints[i].x * validActualPoints[i].y;
+      sumXX += validActualPoints[i].x * validActualPoints[i].x;
+    }
+    const denom = n * sumXX - sumX * sumX;
+    if (denom !== 0) {
+      m = (n * sumXY - sumX * sumY) / denom;
+      c = (sumY - m * sumX) / n;
+    } else {
+      m = validActualPoints[validActualPoints.length - 1].y / (validActualPoints[validActualPoints.length - 1].x || 1);
+      c = 0;
+    }
+  } else if (validActualPoints.length === 1) {
+    m = validActualPoints[0].y / (validActualPoints[0].x || 1);
+    c = 0;
+  }
+
+  const x100 = m > 0 ? (100 - c) / m : null;
+  let projectedCompletionLabel = "N/A (No positive velocity)";
+
+  if (validActualPoints.length > 0) {
+    if (m > 0 && x100 !== null) {
+      const floorIdx = Math.floor(x100);
+      if (floorIdx < totalPoints) {
+        projectedCompletionLabel = activeDataset[floorIdx]?.label || "N/A";
+      } else {
+        const lastPt = activeDataset[totalPoints - 1];
+        const monthsAway = Math.round(x100 - (totalPoints - 1));
+        let projectedMonth = lastPt.sourceItem.month + monthsAway;
+        let projectedYear = (lastPt as any).year ?? selectedYear;
+        
+        while (projectedMonth > 12) {
+          projectedMonth -= 12;
+          projectedYear += 1;
+        }
+        projectedCompletionLabel = `${MONTH_NAMES[projectedMonth - 1]}-${String(projectedYear).substring(2)}`;
+      }
+    } else {
+      projectedCompletionLabel = "Never (Zero/Negative Velocity)";
+    }
+  }
+
   const getX = (index: number) => {
     return margin.left + (index * chartWidth) / (totalPoints - 1);
   };
@@ -269,6 +328,31 @@ export default function MainChartPanel({ project, allProjects, onUpdateProject }
   const getY_Progress = (percentage: number) => {
     return margin.top + chartHeight - (percentage * chartHeight) / 100;
   };
+
+  const trendlinePoints: Array<{ x: number; y: number }> = [];
+  if (validActualPoints.length > 0) {
+    if (m > 0 && x100 !== null) {
+      const xEnd = x100 < totalPoints - 1 ? x100 : totalPoints - 1;
+      
+      const pStart_x = margin.left + (0 * chartWidth) / (totalPoints - 1);
+      const pStart_y = getY_Progress(Math.max(0, Math.min(100, c)));
+      
+      const pEnd_x = margin.left + (xEnd * chartWidth) / (totalPoints - 1);
+      const pEnd_y = getY_Progress(Math.max(0, Math.min(100, m * xEnd + c)));
+      
+      trendlinePoints.push({ x: pStart_x, y: pStart_y });
+      trendlinePoints.push({ x: pEnd_x, y: pEnd_y });
+    } else {
+      const pStart_x = margin.left + (0 * chartWidth) / (totalPoints - 1);
+      const pStart_y = getY_Progress(Math.max(0, Math.min(100, c)));
+      
+      const pEnd_x = margin.left + ((totalPoints - 1) * chartWidth) / (totalPoints - 1);
+      const pEnd_y = getY_Progress(Math.max(0, Math.min(100, m * (totalPoints - 1) + c)));
+      
+      trendlinePoints.push({ x: pStart_x, y: pStart_y });
+      trendlinePoints.push({ x: pEnd_x, y: pEnd_y });
+    }
+  }
 
   // Find max cash flow to scale the bar chart dynamically
   const maxCashInTimeline = Math.max(
@@ -404,6 +488,23 @@ export default function MainChartPanel({ project, allProjects, onUpdateProject }
               {isMultiYear ? 'Campaign Level (2025-2028)' : 'Year Level View'}
             </button>
           </div>
+
+          {/* Forecast Trendline Toggle */}
+          {activeTab === 'scurve' && (
+            <div className="border-l border-slate-200 pl-2">
+              <button
+                onClick={() => setShowForecast(!showForecast)}
+                className={`px-3.5 py-2 text-xs font-bold rounded-lg border transition-all flex items-center gap-2 cursor-pointer ${
+                  showForecast 
+                    ? 'bg-purple-900 text-white border-purple-900 hover:bg-purple-950 font-black' 
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <TrendingUp className="w-3.5 h-3.5" />
+                {showForecast ? 'Forecast: Active' : 'Enable Forecast'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -431,6 +532,12 @@ export default function MainChartPanel({ project, allProjects, onUpdateProject }
                   <span className="w-3 h-1.5 bg-emerald-500 rounded-full" />
                   <span className="text-slate-600 font-bold">Recovery Buffer</span>
                 </div>
+                {showForecast && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-1.5 bg-purple-500 rounded-full animate-pulse" />
+                    <span className="text-slate-600 font-bold">Regression Forecast</span>
+                  </div>
+                )}
               </>
             ) : (
               <>
@@ -454,6 +561,44 @@ export default function MainChartPanel({ project, allProjects, onUpdateProject }
             )}
           </div>
         </div>
+
+        {/* Forecast Stats Banner */}
+        {activeTab === 'scurve' && showForecast && (
+          <div className="mb-4 p-3.5 bg-purple-50/50 border border-purple-100 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100/70 text-purple-700 rounded-lg shrink-0">
+                <TrendingUp className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-purple-900 uppercase tracking-wider block font-mono">Regression Forecast Metrics</span>
+                <span className="text-[11px] text-slate-500 mt-0.5 block">Calculated using least-squares velocity fitting of past actual milestones.</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2 select-text">
+              <div>
+                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Current Velocity</span>
+                <span className="text-xs font-black text-slate-800 font-mono">+{m.toFixed(2)}% / month</span>
+              </div>
+              
+              <div>
+                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Est. Completion</span>
+                <span className="text-xs font-black text-purple-700 font-mono">{projectedCompletionLabel}</span>
+              </div>
+
+              <div className="col-span-2 sm:col-span-1">
+                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Timeline Status</span>
+                <span className={`text-xs font-black font-mono ${
+                  m <= 0 
+                  ? 'text-rose-600' 
+                  : (m > 0 && projectedCompletionLabel === 'Already Completed' ? 'text-emerald-600' : 'text-blue-700')
+                }`}>
+                  {m <= 0 ? 'Lagging / Flat' : 'Active Growth'}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Scalable Vector Graphics Visualizer */}
         <div className="relative w-full overflow-x-auto min-h-[310px] flex justify-center custom-scrollbar">
@@ -622,6 +767,53 @@ export default function MainChartPanel({ project, allProjects, onUpdateProject }
                     strokeLinejoin="round"
                     className="transition-all duration-300"
                   />
+                )}
+
+                {/* Forecast Least-Squares Trendline Overlay */}
+                {showForecast && trendlinePoints.length >= 2 && (
+                  <g id="forecast-regression-trendline">
+                    <path
+                      d={`M ${trendlinePoints[0].x} ${trendlinePoints[0].y} L ${trendlinePoints[1].x} ${trendlinePoints[1].y}`}
+                      fill="none"
+                      stroke="#A855F7"
+                      strokeWidth="3.5"
+                      strokeLinecap="round"
+                      strokeDasharray="6 4"
+                      className="transition-all duration-300 animate-pulse"
+                    />
+
+                    {/* Target 100% intersection node inside the visible graph */}
+                    {m > 0 && x100 !== null && x100 < totalPoints && (
+                      <g>
+                        <line
+                          x1={margin.left + (x100 * chartWidth) / (totalPoints - 1)}
+                          y1={getY_Progress(100)}
+                          x2={margin.left + (x100 * chartWidth) / (totalPoints - 1)}
+                          y2={containerHeight - margin.bottom}
+                          stroke="#A855F7"
+                          strokeWidth="1"
+                          strokeDasharray="2 3"
+                        />
+                        <circle
+                          cx={margin.left + (x100 * chartWidth) / (totalPoints - 1)}
+                          cy={getY_Progress(100)}
+                          r="6"
+                          fill="#A855F7"
+                          stroke="#FFFFFF"
+                          strokeWidth="2"
+                        />
+                        <text
+                          x={margin.left + (x100 * chartWidth) / (totalPoints - 1)}
+                          y={getY_Progress(100) - 10}
+                          textAnchor="middle"
+                          className="text-[9px] font-black fill-purple-700 font-mono"
+                          style={{ paintOrder: 'stroke', stroke: '#FFFFFF', strokeWidth: 3.5, strokeLinejoin: 'round' }}
+                        >
+                          Forecasted 100% ({projectedCompletionLabel})
+                        </text>
+                      </g>
+                    )}
+                  </g>
                 )}
 
                 {/* Nodes on S-curve timelines */}
