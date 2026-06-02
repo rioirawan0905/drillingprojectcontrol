@@ -105,50 +105,171 @@ export default function App() {
     setProjects((prev) => prev.map((proj) => (proj.year === normalized.year ? normalized : proj)));
   };
 
+  const parseSingleYearBlock = (defaultYear: number, blockLines: string[]) => {
+    let year = defaultYear;
+    let name = "";
+    let reportingMonth = 1;
+    let accelerationFactor = 1.0;
+    const wbsList: any[] = [];
+    const monthlyData: any[] = [];
+    let currentSection = "";
+
+    for (let line of blockLines) {
+      line = line.trim();
+      if (!line) continue;
+
+      if (line.startsWith("Project Name,")) {
+        name = line.substring("Project Name,".length).replace(/^"|"$/g, '').trim();
+        continue;
+      }
+      if (line.startsWith("Selected Plan Year,")) {
+        const val = parseInt(line.substring("Selected Plan Year,".length).trim(), 10);
+        if (!isNaN(val)) year = val;
+        continue;
+      }
+      if (line.startsWith("Active Reporting Month,")) {
+        const valStr = line.substring("Active Reporting Month,".length).replace(/^M/, '').trim();
+        const val = parseInt(valStr, 10);
+        if (!isNaN(val)) reportingMonth = val;
+        continue;
+      }
+      if (line.startsWith("Future Recovery Rate Factor,")) {
+        const valStr = line.substring("Future Recovery Rate Factor,".length).replace(/x$/, '').trim();
+        const val = parseFloat(valStr);
+        if (!isNaN(val)) accelerationFactor = val;
+        continue;
+      }
+
+      if (line.includes("SECTION 1: WORK BREAKDOWN STRUCTURE")) {
+        currentSection = "WBS";
+        continue;
+      }
+      if (line.includes("SECTION 2: 12-MONTH CHRONOLOGICAL S-CURVE DATA")) {
+        currentSection = "SCURVE";
+        continue;
+      }
+
+      if (line.startsWith("WBS Index,") || line.startsWith("Month,Date Label,")) {
+        continue;
+      }
+
+      const cells: string[] = [];
+      let inQuotes = false;
+      let currentCell = "";
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          cells.push(currentCell.trim());
+          currentCell = "";
+        } else {
+          currentCell += char;
+        }
+      }
+      cells.push(currentCell.trim());
+
+      if (currentSection === "WBS" && cells.length >= 5) {
+        const wbsIndex = cells[0];
+        const wbsName = cells[1].replace(/^"|"$/g, '');
+        const budget = parseFloat(cells[2].replace(/[$,]/g, ''));
+        const spent = parseFloat(cells[3].replace(/[$,]/g, ''));
+        const progress = parseFloat(cells[4].replace(/%/g, ''));
+
+        if (wbsIndex && !isNaN(budget) && !isNaN(spent) && !isNaN(progress)) {
+          wbsList.push({
+            id: `wbs-imported-${year}-${wbsIndex.replace(/[^a-zA-Z0-9]/g, '')}`,
+            name: wbsName || `Work Area ${wbsIndex}`,
+            budget,
+            spent,
+            progress: Math.min(100, Math.max(0, progress))
+          });
+        }
+      } else if (currentSection === "SCURVE" && cells.length >= 8) {
+        const mStr = cells[0].replace(/^M/, '').trim();
+        const monthNum = parseInt(mStr, 10);
+        
+        const targetCumulativeProgress = parseFloat(cells[3].replace(/%/g, ''));
+        const actualCumStr = cells[5];
+        const actualCumulativeProgress = (actualCumStr === "N/A" || actualCumStr === "") ? null : parseFloat(actualCumStr.replace(/%/g, ''));
+
+        const targetCashFlow = parseFloat(cells[6].replace(/[$,]/g, ''));
+        const actualCashStr = cells[7];
+        const actualCashFlow = (actualCashStr === "N/A" || actualCashStr === "") ? null : parseFloat(actualCashStr.replace(/[$,]/g, ''));
+
+        if (!isNaN(monthNum) && !isNaN(targetCumulativeProgress) && !isNaN(targetCashFlow)) {
+          monthlyData.push({
+            month: monthNum,
+            targetCumulativeProgress,
+            actualCumulativeProgress: isNaN(actualCumulativeProgress as number) ? null : actualCumulativeProgress,
+            targetCashFlow,
+            actualCashFlow: isNaN(actualCashFlow as number) ? null : actualCashFlow,
+          });
+        }
+      }
+    }
+
+    return {
+      year,
+      name,
+      reportingMonth,
+      accelerationFactor,
+      wbsList,
+      monthlyData,
+    };
+  };
+
   const handleExportCSV = () => {
     let csvContent = "";
     
-    csvContent += `DRILLING PROJECT CONTROLS SIMULATION LEDGER\n`;
-    csvContent += `Project Name,${currentProject.name}\n`;
-    csvContent += `Selected Plan Year,${currentProject.year}\n`;
-    csvContent += `Active Reporting Month,M${currentProject.reportingMonth}\n`;
-    csvContent += `Future Recovery Rate Factor,${currentProject.accelerationFactor}x\n\n`;
-
-    csvContent += `SECTION 1: WORK BREAKDOWN STRUCTURE (WBS) BUDGETS & PROGRESS\n`;
-    csvContent += `WBS Index,Cost Center Name,Approved Budget ($k),Verified Spent ($k),Physical Progress (%)\n`;
-    currentProject.wbsList.forEach((item, index) => {
-      csvContent += `WBS-${String(index + 1).padStart(2, '0')},"${item.name.replace(/"/g, '""')}",${item.budget},${item.spent},${item.progress}\n`;
-    });
-    csvContent += `\n`;
-
-    csvContent += `SECTION 2: 12-MONTH CHRONOLOGICAL S-CURVE DATA\n`;
-    csvContent += `Month,Date Label,Planned Incremental Target (%),Planned Cumulative Target (%),Actual Incremental Progress (%),Actual Cumulative Progress (%),Planned Drawdown ($k),Actual Drawdown ($k)\n`;
+    // Export all year campaigns, ordered chronologically
+    const sortedProjects = [...projects].sort((a, b) => a.year - b.year);
     
-    const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    currentProject.monthlyData.forEach((m, idx) => {
-      const label = `${MONTH_NAMES[m.month - 1]}-${String(selectedYear).substring(2)}`;
-      const prevTarget = idx === 0 ? 0 : currentProject.monthlyData[idx - 1].targetCumulativeProgress;
-      const incTarget = m.targetCumulativeProgress - prevTarget;
+    sortedProjects.forEach((proj) => {
+      csvContent += `=== START CAMPAIGN YEAR: ${proj.year} ===\n`;
+      csvContent += `DRILLING PROJECT CONTROLS SIMULATION LEDGER\n`;
+      csvContent += `Project Name,${proj.name}\n`;
+      csvContent += `Selected Plan Year,${proj.year}\n`;
+      csvContent += `Active Reporting Month,M${proj.reportingMonth}\n`;
+      csvContent += `Future Recovery Rate Factor,${proj.accelerationFactor}x\n\n`;
 
-      let incActual: string | number = "N/A";
-      let cumActual: string | number = "N/A";
-      let actCash: string | number = "N/A";
+      csvContent += `SECTION 1: WORK BREAKDOWN STRUCTURE (WBS) BUDGETS & PROGRESS\n`;
+      csvContent += `WBS Index,Cost Center Name,Approved Budget ($k),Verified Spent ($k),Physical Progress (%)\n`;
+      proj.wbsList.forEach((item, index) => {
+        csvContent += `WBS-${String(index + 1).padStart(2, '0')},"${item.name.replace(/"/g, '""')}",${item.budget},${item.spent},${item.progress}\n`;
+      });
+      csvContent += `\n`;
 
-      if (m.month <= currentProject.reportingMonth) {
-        const prevActual = idx === 0 ? 0 : (currentProject.monthlyData[idx - 1].actualCumulativeProgress ?? 0);
-        incActual = (m.actualCumulativeProgress ?? 0) - prevActual;
-        cumActual = m.actualCumulativeProgress ?? 0;
-        actCash = m.actualCashFlow ?? 0;
-      }
+      csvContent += `SECTION 2: 12-MONTH CHRONOLOGICAL S-CURVE DATA\n`;
+      csvContent += `Month,Date Label,Planned Incremental Target (%),Planned Cumulative Target (%),Actual Incremental Progress (%),Actual Cumulative Progress (%),Planned Drawdown ($k),Actual Drawdown ($k)\n`;
+      
+      const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      proj.monthlyData.forEach((m, idx) => {
+        const label = `${MONTH_NAMES[m.month - 1]}-${String(proj.year).substring(2)}`;
+        const prevTarget = idx === 0 ? 0 : proj.monthlyData[idx - 1].targetCumulativeProgress;
+        const incTarget = m.targetCumulativeProgress - prevTarget;
 
-      csvContent += `M${m.month},${label},${incTarget}%,${m.targetCumulativeProgress}%,${incActual}%,${cumActual}%,${m.targetCashFlow},${actCash}\n`;
+        let incActual: string | number = "N/A";
+        let cumActual: string | number = "N/A";
+        let actCash: string | number = "N/A";
+
+        if (m.month <= proj.reportingMonth) {
+          const prevActual = idx === 0 ? 0 : (proj.monthlyData[idx - 1].actualCumulativeProgress ?? 0);
+          incActual = (m.actualCumulativeProgress ?? 0) - prevActual;
+          cumActual = m.actualCumulativeProgress ?? 0;
+          actCash = m.actualCashFlow ?? 0;
+        }
+
+        csvContent += `M${m.month},${label},${incTarget}%,${m.targetCumulativeProgress}%,${incActual}%,${cumActual}%,${m.targetCashFlow},${actCash}\n`;
+      });
+      csvContent += `=== END CAMPAIGN YEAR: ${proj.year} ===\n\n`;
     });
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `MLN_Phase5_ProjectControls_${selectedYear}.csv`);
+    link.setAttribute("download", `MLN_Phase5_ProjectControls_All_Campaign_Years.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -164,132 +285,122 @@ export default function App() {
       if (!text) return;
 
       const lines = text.split(/\r?\n/);
-      
-      let year = selectedYear;
-      let name = currentProject.name;
-      let reportingMonth = currentProject.reportingMonth;
-      let accelerationFactor = currentProject.accelerationFactor;
-      const wbsList: typeof currentProject.wbsList = [];
-      const monthlyData: typeof currentProject.monthlyData = [];
+      const containsCampaignBlocks = text.includes("=== START CAMPAIGN YEAR:");
 
-      let currentSection = "";
+      if (containsCampaignBlocks) {
+        // Multi-year campaign import
+        const importedProjectsMap = new Map<number, {
+          year: number;
+          name: string;
+          reportingMonth: number;
+          accelerationFactor: number;
+          wbsList: any[];
+          monthlyData: any[];
+        }>();
 
-      for (let line of lines) {
-        line = line.trim();
-        if (!line) continue;
+        let currentBlockYear: number | null = null;
+        let blockLines: string[] = [];
 
-        if (line.startsWith("Project Name,")) {
-          name = line.substring("Project Name,".length).replace(/^"|"$/g, '').trim();
-          continue;
-        }
-        if (line.startsWith("Selected Plan Year,")) {
-          const val = parseInt(line.substring("Selected Plan Year,".length).trim(), 10);
-          if (!isNaN(val)) year = val;
-          continue;
-        }
-        if (line.startsWith("Active Reporting Month,")) {
-          const valStr = line.substring("Active Reporting Month,".length).replace(/^M/, '').trim();
-          const val = parseInt(valStr, 10);
-          if (!isNaN(val)) reportingMonth = val;
-          continue;
-        }
-        if (line.startsWith("Future Recovery Rate Factor,")) {
-          const valStr = line.substring("Future Recovery Rate Factor,".length).replace(/x$/, '').trim();
-          const val = parseFloat(valStr);
-          if (!isNaN(val)) accelerationFactor = val;
-          continue;
-        }
+        for (let line of lines) {
+          const rLine = line.trim();
+          if (!rLine) continue;
 
-        if (line.includes("SECTION 1: WORK BREAKDOWN STRUCTURE")) {
-          currentSection = "WBS";
-          continue;
-        }
-        if (line.includes("SECTION 2: 12-MONTH CHRONOLOGICAL S-CURVE DATA")) {
-          currentSection = "SCURVE";
-          continue;
-        }
+          const startMatch = rLine.match(/^===\s*START CAMPAIGN YEAR:\s*(\d+)\s*===/i);
+          const endMatch = rLine.match(/^===\s*END CAMPAIGN YEAR:\s*(\d+)\s*===/i);
 
-        if (line.startsWith("WBS Index,") || line.startsWith("Month,Date Label,")) {
-          continue;
-        }
+          if (startMatch) {
+            currentBlockYear = parseInt(startMatch[1], 10);
+            blockLines = [];
+            continue;
+          }
 
-        const cells: string[] = [];
-        let inQuotes = false;
-        let currentCell = "";
-        for (let i = 0; i < line.length; i++) {
-          const char = line[i];
-          if (char === '"') {
-            inQuotes = !inQuotes;
-          } else if (char === ',' && !inQuotes) {
-            cells.push(currentCell.trim());
-            currentCell = "";
-          } else {
-            currentCell += char;
+          if (endMatch) {
+            if (currentBlockYear !== null) {
+              const parsedBlock = parseSingleYearBlock(currentBlockYear, blockLines);
+              if (parsedBlock) {
+                importedProjectsMap.set(currentBlockYear, parsedBlock);
+              }
+              currentBlockYear = null;
+            }
+            continue;
+          }
+
+          if (currentBlockYear !== null) {
+            blockLines.push(line);
           }
         }
-        cells.push(currentCell.trim());
 
-        if (currentSection === "WBS" && cells.length >= 5) {
-          const wbsIndex = cells[0];
-          const wbsName = cells[1].replace(/^"|"$/g, '');
-          const budget = parseFloat(cells[2].replace(/[$,]/g, ''));
-          const spent = parseFloat(cells[3].replace(/[$,]/g, ''));
-          const progress = parseFloat(cells[4].replace(/%/g, ''));
-
-          if (wbsIndex && !isNaN(budget) && !isNaN(spent) && !isNaN(progress)) {
-            wbsList.push({
-              id: `wbs-imported-${wbsIndex.replace(/[^a-zA-Z0-9]/g, '')}`,
-              name: wbsName || `Work Area ${wbsIndex}`,
-              budget,
-              spent,
-              progress: Math.min(100, Math.max(0, progress))
+        if (importedProjectsMap.size > 0) {
+          setProjects((prev) => {
+            const updated = prev.map((proj) => {
+              const imported = importedProjectsMap.get(proj.year);
+              if (imported) {
+                return normalizeProjectData({
+                  year: proj.year,
+                  name: imported.name || proj.name,
+                  reportingMonth: imported.reportingMonth,
+                  accelerationFactor: imported.accelerationFactor,
+                  wbsList: imported.wbsList.length > 0 ? imported.wbsList : proj.wbsList,
+                  monthlyData: imported.monthlyData.length === 12 ? imported.monthlyData : proj.monthlyData,
+                });
+              }
+              return proj;
             });
-          }
-        } else if (currentSection === "SCURVE" && cells.length >= 8) {
-          const mStr = cells[0].replace(/^M/, '').trim();
-          const monthNum = parseInt(mStr, 10);
-          
-          const targetCumulativeProgress = parseFloat(cells[3].replace(/%/g, ''));
-          const actualCumStr = cells[5];
-          const actualCumulativeProgress = (actualCumStr === "N/A" || actualCumStr === "") ? null : parseFloat(actualCumStr.replace(/%/g, ''));
 
-          const targetCashFlow = parseFloat(cells[6].replace(/[$,]/g, ''));
-          const actualCashStr = cells[7];
-          const actualCashFlow = (actualCashStr === "N/A" || actualCashStr === "") ? null : parseFloat(actualCashStr.replace(/[$,]/g, ''));
+            // Put any years of the campaign we imported but don't exist in previous list
+            const finalProjects = [...updated];
+            for (const [yr, imported] of importedProjectsMap.entries()) {
+              if (!finalProjects.some((p) => p.year === yr)) {
+                finalProjects.push(normalizeProjectData({
+                  year: yr,
+                  name: imported.name || `Project ${yr} (Imported)`,
+                  reportingMonth: imported.reportingMonth,
+                  accelerationFactor: imported.accelerationFactor,
+                  wbsList: imported.wbsList.length > 0 ? imported.wbsList : [],
+                  monthlyData: imported.monthlyData.length === 12 ? imported.monthlyData : [],
+                }));
+              }
+            }
 
-          if (!isNaN(monthNum) && !isNaN(targetCumulativeProgress) && !isNaN(targetCashFlow)) {
-            monthlyData.push({
-              month: monthNum,
-              targetCumulativeProgress,
-              actualCumulativeProgress: isNaN(actualCumulativeProgress as number) ? null : actualCumulativeProgress,
-              targetCashFlow,
-              actualCashFlow: isNaN(actualCashFlow as number) ? null : actualCashFlow,
-            });
+            return finalProjects;
+          });
+
+          // Set active view to the first imported year, or keep current if it was updated
+          const years = Array.from(importedProjectsMap.keys());
+          if (years.includes(selectedYear)) {
+            // Keep selected year as is since it was updated
+          } else if (years.length > 0) {
+            setSelectedYear(years[0]);
           }
+        } else {
+          alert("Could not identify valid campaign year blocks in the multi-year CSV. Please check the format.");
         }
-      }
-
-      if (wbsList.length > 0 || monthlyData.length > 0) {
-        const importedProject: ProjectYearData = {
-          year,
-          name: name || `Project ${year} (Imported)`,
-          reportingMonth: reportingMonth,
-          accelerationFactor: accelerationFactor,
-          wbsList: wbsList.length > 0 ? wbsList : currentProject.wbsList,
-          monthlyData: monthlyData.length === 12 ? monthlyData : currentProject.monthlyData,
-        };
-
-        setSelectedYear(year);
-        setProjects((prev) => {
-          const exists = prev.some((p) => p.year === year);
-          if (exists) {
-            return prev.map((p) => (p.year === year ? normalizeProjectData(importedProject) : p));
-          } else {
-            return [...prev, normalizeProjectData(importedProject)];
-          }
-        });
       } else {
-        alert("Could not identify valid WBS or S-Curve blocks in the CSV. Please make sure the layout matches the exported format.");
+        // Fallback to single project parsing for backward compatibility
+        const parsedBlock = parseSingleYearBlock(selectedYear, lines);
+        
+        if (parsedBlock.wbsList.length > 0 || parsedBlock.monthlyData.length > 0) {
+          const importedProject: ProjectYearData = {
+            year: parsedBlock.year,
+            name: parsedBlock.name || `Project ${parsedBlock.year} (Imported)`,
+            reportingMonth: parsedBlock.reportingMonth,
+            accelerationFactor: parsedBlock.accelerationFactor,
+            wbsList: parsedBlock.wbsList.length > 0 ? parsedBlock.wbsList : currentProject.wbsList,
+            monthlyData: parsedBlock.monthlyData.length === 12 ? parsedBlock.monthlyData : currentProject.monthlyData,
+          };
+
+          setSelectedYear(parsedBlock.year);
+          setProjects((prev) => {
+            const exists = prev.some((p) => p.year === parsedBlock.year);
+            if (exists) {
+              return prev.map((p) => (p.year === parsedBlock.year ? normalizeProjectData(importedProject) : p));
+            } else {
+              return [...prev, normalizeProjectData(importedProject)];
+            }
+          });
+        } else {
+          alert("Could not identify valid WBS or S-Curve blocks in the CSV. Please make sure the layout matches the exported format.");
+        }
       }
     };
 
