@@ -22,6 +22,7 @@ export default function SidebarControls({
   onUpdateProject,
 }: SidebarControlsProps) {
   const [activeTab, setActiveTab] = useState<'wbs' | 'timephased'>('wbs');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const prevProject = allProjects.find((p) => p.year === currentProject.year - 1);
 
@@ -318,46 +319,77 @@ export default function SidebarControls({
             {currentProject.wbsList.map((item, index) => (
               <div
                 key={item.id}
-                className="p-3 bg-slate-50/70 border border-slate-100 hover:border-slate-200 rounded-xl space-y-2.5 transition-shadow relative group"
+                className="p-3 bg-slate-50/70 border border-slate-100 hover:border-slate-200 rounded-xl space-y-2.5 transition-all relative group overflow-hidden"
               >
-                <button
-                  onClick={() => deleteWBSItem(item.id)}
-                  title="Remove cost center"
-                  className="absolute right-2 top-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-0.5">WBS Center {index + 1}</label>
-                  <input
-                    type="text"
-                    value={item.name}
-                    onChange={(e) => updateWBSItem(item.id, 'name', e.target.value)}
-                    className="w-full text-xs bg-white text-slate-800 border border-slate-200 focus:outline-hidden focus:ring-1 focus:ring-blue-500 rounded px-2 py-1.5 font-medium"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[10px] font-medium text-slate-500 mb-0.5">Budget ($k)</label>
-                    <SafeNumberInput
-                      step="5"
-                      value={item.budget}
-                      onChange={(val) => updateWBSItem(item.id, 'budget', val ?? 0)}
-                      className="w-full text-xs bg-white text-slate-800 border border-slate-200 focus:outline-hidden focus:ring-1 focus:ring-blue-500 rounded px-2 py-1 font-mono hover:border-slate-300 transition-colors text-center"
-                    />
+                {deletingId === item.id ? (
+                  <div className="py-2 px-1 text-center space-y-3 animate-fade-in select-none">
+                    <div className="flex flex-col items-center gap-1.5">
+                      <div className="p-1.5 bg-rose-50 text-rose-600 rounded-full">
+                        <Trash2 className="w-4 h-4 animate-bounce" />
+                      </div>
+                      <span className="text-xs font-bold text-rose-700">Delete Cost Center?</span>
+                      <p className="text-[10px] text-slate-500 leading-normal max-w-[200px] mx-auto">
+                        Are you sure you want to delete <strong className="font-bold text-slate-800">"{item.name || `WBS Center ${index + 1}`}"</strong>? All budget, spent, and progress tracking records for this center will be permanently removed.
+                      </p>
+                    </div>
+                    <div className="flex gap-2 justify-center">
+                      <button
+                        onClick={() => setDeletingId(null)}
+                        className="px-3 py-1.5 text-[10px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-slate-800 cursor-pointer transition-all"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => {
+                          deleteWBSItem(item.id);
+                          setDeletingId(null);
+                        }}
+                        className="px-3 py-1.5 text-[10px] font-bold text-white bg-rose-600 rounded-lg hover:bg-rose-700 cursor-pointer transition-all shadow-xs"
+                      >
+                        Confirm Delete
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-[10px] font-medium text-slate-500 mb-0.5">Spent ($k)</label>
-                    <SafeNumberInput
-                      step="5"
-                      value={item.spent}
-                      onChange={(val) => updateWBSItem(item.id, 'spent', val ?? 0)}
-                      className="w-full text-xs bg-white text-slate-800 border border-slate-200 focus:outline-hidden focus:ring-1 focus:ring-blue-500 rounded px-2 py-1 font-mono hover:border-slate-300 transition-colors text-center"
-                    />
-                  </div>
-                </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setDeletingId(item.id)}
+                      title="Remove cost center"
+                      className="absolute right-2 top-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-0.5">WBS Center {index + 1}</label>
+                      <input
+                        type="text"
+                        value={item.name}
+                        onChange={(e) => updateWBSItem(item.id, 'name', e.target.value)}
+                        className="w-full text-xs bg-white text-slate-800 border border-slate-200 focus:outline-hidden focus:ring-1 focus:ring-blue-500 rounded px-2 py-1.5 font-medium"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-medium text-slate-500 mb-0.5">Budget ($k)</label>
+                        <SafeNumberInput
+                          step="5"
+                          value={item.budget}
+                          onChange={(val) => updateWBSItem(item.id, 'budget', val ?? 0)}
+                          className="w-full text-xs bg-white text-slate-800 border border-slate-200 focus:outline-hidden focus:ring-1 focus:ring-blue-500 rounded px-2 py-1 font-mono hover:border-slate-300 transition-colors text-center"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-medium text-slate-500 mb-0.5">Spent ($k)</label>
+                        <SafeNumberInput
+                          step="5"
+                          value={item.spent}
+                          onChange={(val) => updateWBSItem(item.id, 'spent', val ?? 0)}
+                          className="w-full text-xs bg-white text-slate-800 border border-slate-200 focus:outline-hidden focus:ring-1 focus:ring-blue-500 rounded px-2 py-1 font-mono hover:border-slate-300 transition-colors text-center"
+                        />
+                      </div>
+                    </div>
 
                     <div>
                       <div className="flex justify-between text-[10px] text-slate-500 mb-0.5">
@@ -374,6 +406,8 @@ export default function SidebarControls({
                         className="w-full accent-blue-600 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer"
                       />
                     </div>
+                  </>
+                )}
               </div>
             ))}
             

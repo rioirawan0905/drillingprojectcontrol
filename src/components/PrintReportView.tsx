@@ -690,18 +690,46 @@ export default function PrintReportView({ project, allProjects, config, orientat
                           rx="0.5"
                         />
 
+                        {/* Target cash flow data label */}
+                        {pt.targetCashFlow > 0 && (!isCamp || idx % 4 === 0) && (
+                          <text
+                            x={xCenter - barWidth / 2 - 1}
+                            y={planY - 3}
+                            textAnchor="middle"
+                            className="text-[6.5px] font-bold fill-blue-800 font-mono"
+                            style={{ paintOrder: 'stroke', stroke: '#FFFFFF', strokeWidth: 1.5, strokeLinejoin: 'round' }}
+                          >
+                            ${Math.round(pt.targetCashFlow)}
+                          </text>
+                        )}
+
                         {/* Actual Monthly Bar */}
                         {pt.actualCashFlow !== null && (
-                          <rect
-                            x={xCenter + 1}
-                            y={actY}
-                            width={barWidth}
-                            height={actHeight}
-                            fill="#FFEDD5"
-                            stroke="#F97316"
-                            strokeWidth="0.5"
-                            rx="0.5"
-                          />
+                          <>
+                            <rect
+                              x={xCenter + 1}
+                              y={actY}
+                              width={barWidth}
+                              height={actHeight}
+                              fill="#FFEDD5"
+                              stroke="#F97316"
+                              strokeWidth="0.5"
+                              rx="0.5"
+                            />
+
+                            {/* Actual cash flow data label */}
+                            {pt.actualCashFlow > 0 && (!isCamp || idx % 4 === 0) && (
+                              <text
+                                x={xCenter + barWidth / 2 + 1}
+                                y={actY - 3}
+                                textAnchor="middle"
+                                className="text-[6.5px] font-bold fill-orange-700 font-mono"
+                                style={{ paintOrder: 'stroke', stroke: '#FFFFFF', strokeWidth: 1.5, strokeLinejoin: 'round' }}
+                              >
+                                ${Math.round(pt.actualCashFlow)}
+                              </text>
+                            )}
+                          </>
                         )}
 
                         {/* Axis X Month Marker Label */}

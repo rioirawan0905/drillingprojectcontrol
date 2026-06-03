@@ -904,19 +904,47 @@ export default function MainChartPanel({ project, allProjects, onUpdateProject }
                         className="transition-all duration-300"
                       />
 
+                      {/* Target cash flow data label */}
+                      {pt.targetCashFlow > 0 && (!isMultiYear || idx % 4 === 0) && (
+                        <text
+                          x={pvX + (isMultiYear ? 1.75 : 4.5)}
+                          y={pvY - 4}
+                          textAnchor="middle"
+                          className={`${isMultiYear ? 'text-[7px]' : 'text-[9px]'} font-bold fill-blue-600 font-mono`}
+                          style={{ paintOrder: 'stroke', stroke: '#FFFFFF', strokeWidth: 2.5, strokeLinejoin: 'round' }}
+                        >
+                          ${Math.round(pt.targetCashFlow)}
+                        </text>
+                      )}
+
                       {/* Actual spent bar */}
                       {hasSpentActual && (
-                        <rect
-                          x={acX}
-                          y={acY}
-                          width={isMultiYear ? 3.5 : 9}
-                          height={acH}
-                          fill="#FFEDD5"
-                          stroke="#F97316"
-                          strokeWidth="1"
-                          rx="1"
-                          className="transition-all duration-300"
-                        />
+                        <>
+                          <rect
+                            x={acX}
+                            y={acY}
+                            width={isMultiYear ? 3.5 : 9}
+                            height={acH}
+                            fill="#FFEDD5"
+                            stroke="#F97316"
+                            strokeWidth="1"
+                            rx="1"
+                            className="transition-all duration-300"
+                          />
+
+                          {/* Actual cash flow data label */}
+                          {pt.actualCashFlow! > 0 && (!isMultiYear || idx % 4 === 0) && (
+                            <text
+                              x={acX + (isMultiYear ? 1.75 : 4.5)}
+                              y={acY - 4}
+                              textAnchor="middle"
+                              className={`${isMultiYear ? 'text-[7px]' : 'text-[9px]'} font-bold fill-orange-600 font-mono`}
+                              style={{ paintOrder: 'stroke', stroke: '#FFFFFF', strokeWidth: 2.5, strokeLinejoin: 'round' }}
+                            >
+                              ${Math.round(pt.actualCashFlow!)}
+                            </text>
+                          )}
+                        </>
                       )}
                     </g>
                   );
