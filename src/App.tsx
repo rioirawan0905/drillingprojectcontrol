@@ -493,7 +493,7 @@ export default function App() {
         {/* Responsive Grid Structure: Left controls, Right dashboard visualizations */}
         <div id="main-content-layout" className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* LEFT COLUMN: Controls & Form configurations (col-span-4) */}
-          <div className="lg:col-span-4 h-full lg:sticky lg:top-[88px] max-h-[calc(100vh-120px)] overflow-hidden">
+          <div className="lg:col-span-4 h-full lg:sticky lg:top-[76px] lg:h-[820px] lg:max-h-[calc(100vh-100px)] lg:min-h-[740px] overflow-hidden">
             <SidebarControls
               currentProject={currentProject}
               allProjects={projects}
